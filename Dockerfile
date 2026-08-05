@@ -6,13 +6,14 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /web
 COPY web/admin/package.json web/admin/package-lock.json ./
-RUN npm ci --registry=https://registry.npmmirror.com
+RUN npm config set registry https://registry.npmmirror.com && npm ci
 COPY web/admin/ ./
 RUN npm run build
 
 # ============ Go 后端构建 ============
 FROM golang:1.24-alpine AS backend-builder
 RUN apk add --no-cache git ca-certificates
+ENV GOPROXY=https://goproxy.cn,direct
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod tidy && go mod download
