@@ -39,9 +39,9 @@ RUN chmod +x ./entrypoint.sh && chown -R weiyeston:weiyeston /app
 RUN mkdir -p /app/uploads && chown weiyeston:weiyeston /app/uploads
 
 USER weiyeston
-EXPOSE 8080
+EXPOSE 8090
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
+    CMD curl -f http://localhost:8090/api/health || exit 1
 
 ENTRYPOINT ["./entrypoint.sh"]

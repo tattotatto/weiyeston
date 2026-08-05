@@ -1,6 +1,6 @@
 # 微盈通 V2 - docker-compose 生产部署
 # 启动: docker compose -f docker-compose.prod.yml up -d
-# Nginx 由宿主机管理，反代到本机 127.0.0.1:8080
+# Nginx 由宿主机管理，反代到本机 127.0.0.1:8090
 
 version: '3.9'
 
@@ -14,9 +14,9 @@ services:
     container_name: weiyeston-server
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"   # 仅宿主机本地访问
+      - "127.0.0.1:8090:8090"   # 仅宿主机本地访问
     environment:
-      - WEIYESTON_SERVER_PORT=8080
+      - WEIYESTON_SERVER_PORT=8090
       - WEIYESTON_SERVER_MODE=release
       # 数据库
       - WEIYESTON_DATABASE_HOST=postgres
