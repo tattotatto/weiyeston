@@ -11,11 +11,11 @@ COPY web/admin/ ./
 RUN npm run build
 
 # ============ Go 后端构建 ============
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:1.24-alpine AS backend-builder
 RUN apk add --no-cache git ca-certificates
 WORKDIR /build
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod tidy && go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o weiyeston ./cmd/server
 
