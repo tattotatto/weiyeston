@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
 # 微盈通 V2 - 多阶段 Docker 生产构建
-# 包含: Go 后端构建 + React 前端构建 + 最终运行镜像
 
 # ============ 前端构建 ============
 FROM node:20-alpine AS frontend-builder
@@ -14,13 +13,10 @@ RUN npm run build
 FROM golang:1.24-alpine AS backend-builder
 RUN apk add --no-cache git ca-certificates
 ENV GOPROXY=https://goproxy.cn,direct
-WORKDIR /build
-COPY go.mod ./
-ENV GOPROXY=https://goproxy.cn,direct
 ENV GONOSUMCHECK=*
-RUN go mod tidy
+WORKDIR /build
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o weiyeston ./cmd/server
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o weiyeston ./cmd/server
 
 # ============ 最终运行镜像 ============
 FROM alpine:3.21
@@ -30,22 +26,12 @@ RUN apk add --no-cache ca-certificates tzdata curl bash && \
 
 WORKDIR /app
 
-# Go 二进制
 COPY --from=backend-builder /build/weiyeston .
-
-# 前端静态文件
 COPY --from=frontend-builder /web/dist ./web/admin
-
-# Go 模板
 COPY --from=backend-builder /build/templates ./templates
-
-# 数据库迁移脚本
 COPY --from=backend-builder /build/migrations ./migrations
-
-# 配置文件
 COPY --from=backend-builder /build/config.prod.yaml ./config.yaml
 
-# 入口脚本
 COPY scripts/docker-entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh && chown -R weiyeston:weiyeston /app
 
