@@ -52,6 +52,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 	// ============ 健康检查 ============
 	healthHandler := api.NewHealthHandler(deps.DB, deps.Redis)
 	r.GET("/api/v1/health", healthHandler.Check)
+	r.GET("/api/health", healthHandler.Check)
 
 	// ============ 根路径 → 管理后台 ============
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/admin") })

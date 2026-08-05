@@ -21,6 +21,7 @@ import (
 
 	"github.com/weiyeston/weiyeston-v2/internal/cache"
 	"github.com/weiyeston/weiyeston-v2/internal/config"
+	"github.com/weiyeston/weiyeston-v2/internal/database"
 	"github.com/weiyeston/weiyeston-v2/internal/repository/account"
 	"github.com/weiyeston/weiyeston-v2/internal/repository/ticket"
 	"github.com/weiyeston/weiyeston-v2/internal/router"
@@ -49,6 +50,12 @@ func main() {
 		logger.Fatal("数据库连接失败", zap.Error(err))
 	}
 	defer db.Close()
+
+	// 4.1 执行数据库迁移
+	if err := database.RunMigrations(db, "migrations"); err != nil {
+		logger.Fatal("数据库迁移失败", zap.Error(err))
+	}
+	logger.Info("数据库迁移完成")
 
 	// 5. 初始化 Redis 连接
 	rdb, err := initRedis(cfg)
