@@ -15,9 +15,10 @@ FROM golang:1.24-alpine AS backend-builder
 RUN apk add --no-cache git ca-certificates
 ENV GOPROXY=https://goproxy.cn,direct
 WORKDIR /build
-COPY go.mod go.sum ./
+COPY go.mod ./
+ENV GOPROXY=https://goproxy.cn,direct
 ENV GONOSUMCHECK=*
-RUN go mod tidy && go mod download
+RUN go mod tidy
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o weiyeston ./cmd/server
 
