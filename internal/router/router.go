@@ -49,9 +49,12 @@ func Setup(deps *Dependencies) *gin.Engine {
 	r.Use(middleware.Logger(deps.Logger))
 	r.Use(middleware.CORS(deps.Config.CORS))
 
-	// ============ 健康检查（无需认证） ============
+	// ============ 健康检查 ============
 	healthHandler := api.NewHealthHandler(deps.DB, deps.Redis)
 	r.GET("/api/v1/health", healthHandler.Check)
+
+	// ============ 根路径 → 管理后台 ============
+	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/admin") })
 
 	// ============ 测试接口注册（开发/测试环境） ============
 	if deps.Config.Server.Mode != "release" {
@@ -309,6 +312,20 @@ func Setup(deps *Dependencies) *gin.Engine {
 		}
 	}
 
+
+	// ============ 管理后台 SPA ============
+	r.GET("/admin", func(c *gin.Context) { c.File("./web/admin/index.html") })
+	r.GET("/admin/*filepath", func(c *gin.Context) { c.File("./web/admin/" + c.Param("filepath")) })
+	r.NoRoute(func(c *gin.Context) {
+		p := c.Request.URL.Path
+		if p == "/admin" || (len(p) > 6 && p[:7] == "/admin/") {
+			c.File("./web/admin/index.html")
+			return
+		}
+		http.NotFound(c.Writer, c.Request)
+	})
+	// ============ 上传文件 ============
+	r.Static("/uploads", "./uploads")
 	return r
 }
 
