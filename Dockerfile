@@ -16,6 +16,7 @@ RUN apk add --no-cache git ca-certificates
 ENV GOPROXY=https://goproxy.cn,direct
 WORKDIR /build
 COPY go.mod go.sum ./
+ENV GONOSUMCHECK=*
 RUN go mod tidy && go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o weiyeston ./cmd/server
