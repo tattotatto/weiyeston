@@ -1,8 +1,7 @@
 // T2 Auth — AuthStore 测试
 // TDD: 测试先行，authStore 仅包含基本 login/logout，T2 需扩展 role/avatar_url
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // 注意: useAuthStore 测试需要 zustand store 已扩展 User 接口
 // 当前 User 接口: { id, username, nickname }

@@ -48,7 +48,7 @@ client.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && originalRequest && !(originalRequest as Record<string, unknown>)._retry) {
+    if (error.response?.status === 401 && originalRequest && !(originalRequest as unknown as Record<string, unknown>)._retry) {
       if (isRefreshing) {
         // 正在刷新中，排队等待
         return new Promise<string>((resolve, reject) => {
@@ -59,7 +59,7 @@ client.interceptors.response.use(
         });
       }
 
-      (originalRequest as Record<string, unknown>)._retry = true;
+      (originalRequest as unknown as Record<string, unknown>)._retry = true;
       isRefreshing = true;
 
       try {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Descriptions, Button, Space, Spin, Avatar, Card, message } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, DeleteOutlined, Popconfirm } from '@ant-design/icons';
+import { Descriptions, Button, Space, Spin, Avatar, Card, message, Popconfirm } from 'antd';
+import { ArrowLeftOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { getAccount, deleteAccount, type AccountVO } from '@/api/account';

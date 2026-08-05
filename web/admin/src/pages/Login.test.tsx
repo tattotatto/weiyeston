@@ -1,10 +1,7 @@
 // T2 Auth — Login 页面测试
 // TDD: 测试先行，Login.tsx 仍为占位状态，测试预期 FAIL
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // MSW mock handlers 已在 src/test/mocks/handlers.ts 中定义
 // vitest setup 文件在 src/test/setup.ts 中配置

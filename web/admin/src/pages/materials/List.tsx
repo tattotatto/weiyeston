@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Card, Upload, Select, Button, Space, Popconfirm, message, Pagination, Image, Empty, Spin
+  Card, Upload, Select, Button, Popconfirm, message, Pagination, Image, Empty, Spin
 } from 'antd';
 import {
-  UploadOutlined, DeleteOutlined, PictureOutlined, FileOutlined,
+  DeleteOutlined, PictureOutlined, FileOutlined,
   AudioOutlined, VideoCameraOutlined, InboxOutlined
 } from '@ant-design/icons';
-import type { UploadFile, RcFile } from 'antd/es/upload/interface';
+import type { RcFile } from 'antd/es/upload/interface';
 import { listMaterials, uploadMaterial, deleteMaterial, type MaterialVO } from '@/api/material';
 import { listAccounts, type AccountVO } from '@/api/account';
 

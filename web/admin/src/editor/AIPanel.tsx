@@ -21,7 +21,6 @@ import {
 import { aiWrite, aiLayout, aiProofread, Correction } from '@/api/ai'
 import type { Editor } from '@tiptap/core'
 
-const { TextArea } = Input
 const { Text } = Typography
 
 interface AIPanelProps {

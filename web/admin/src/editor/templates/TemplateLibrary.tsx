@@ -13,8 +13,6 @@ interface TemplateLibraryProps {
   onClose: () => void
 }
 
-type CategoryTab = '全部' | '节日' | '活动' | '新闻'
-
 export function TemplateLibrary({ onApplyTemplate, visible, onClose }: TemplateLibraryProps) {
   const [activeTab, setActiveTab] = useState<string>('全部')
   const [previewTemplate, setPreviewTemplate] = useState<PresetTemplate | null>(null)
@@ -194,7 +192,7 @@ export function TemplateLibrary({ onApplyTemplate, visible, onClose }: TemplateL
               <div style={{ fontWeight: 'bold', marginBottom: 12, fontSize: 14, color: '#999' }}>
                 包含 {previewTemplate.content.content ? (previewTemplate.content.content as unknown[]).length : 0} 个内容模块
               </div>
-              {previewTemplate.content.content &&
+              {(previewTemplate.content.content as unknown[]) &&
                 (previewTemplate.content.content as Array<{ type: string; attrs?: Record<string, unknown> }>).map(
                   (block, idx) => (
                     <div

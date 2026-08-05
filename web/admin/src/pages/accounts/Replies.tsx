@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Popconfirm, message, Tag, Modal, Form, Input,
-  Select, InputNumber, Switch, Tabs,
+  Select, InputNumber, Switch,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';

@@ -4,7 +4,7 @@ import { PlusOutlined, DeleteOutlined, EditOutlined, BarChartOutlined } from '@a
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { listVotes, deleteVote, getVoteResults, type VoteVO, type VoteOptionVO } from '@/api/vote';
+import { listVotes, deleteVote, getVoteResults, type VoteVO, type VoteOptionVO, type VoteResultVO } from '@/api/vote';
 
 function VoteList() {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ function VoteList() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [resultModalOpen, setResultModalOpen] = useState(false);
-  const [resultData, setResultData] = useState<{ options: VoteOptionVO[]; total: number; title: string } | null>(null);
+  const [resultData, setResultData] = useState<VoteResultVO | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -145,9 +145,9 @@ function VoteList() {
       >
         {resultData && (
           <div>
-            <p>总投票数: <strong>{resultData.total}</strong></p>
+            <p>总投票数: <strong>{resultData.total_votes}</strong></p>
             {resultData.options.map((opt) => {
-              const pct = resultData.total > 0 ? Math.round((opt.vote_count / resultData.total) * 100) : 0;
+              const pct = resultData.total_votes > 0 ? Math.round((opt.vote_count / resultData.total_votes) * 100) : 0;
               return (
                 <div key={opt.id} style={{ marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>

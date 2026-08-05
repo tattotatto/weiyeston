@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Form, Input, Select, Button, Space, message, Card, Row, Col, Switch } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getArticle, createArticle, updateArticle, previewArticle, type ArticleVO, type CreateArticleParams } from '@/api/cms';
+import { getArticle, createArticle, updateArticle, type ArticleVO, type CreateArticleParams } from '@/api/cms';
 import { listChannels, type ChannelVO } from '@/api/cms';
 import { EditorCore } from '@/editor/EditorCore';
 
@@ -15,7 +15,7 @@ function ArticleEdit() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [article, setArticle] = useState<ArticleVO | null>(null);
+  const [, setArticle] = useState<ArticleVO | null>(null);
   const [content, setContent] = useState<any>({ type: 'doc', content: [] });
   const [channels, setChannels] = useState<ChannelVO[]>([]);
 
