@@ -22,6 +22,7 @@ export default defineConfig({
       },
     },
   },
+  base: '/admin/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
