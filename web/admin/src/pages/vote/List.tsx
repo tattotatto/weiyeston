@@ -4,7 +4,7 @@ import { PlusOutlined, DeleteOutlined, EditOutlined, BarChartOutlined } from '@a
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { listVotes, deleteVote, getVoteResults, type VoteVO, type VoteOptionVO, type VoteResultVO } from '@/api/vote';
+import { listVotes, deleteVote, getVoteResults, type VoteVO, type VoteResultVO } from '@/api/vote';
 
 function VoteList() {
   const navigate = useNavigate();
