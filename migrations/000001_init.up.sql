@@ -52,6 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_tenants_status
     ON tenants(status) WHERE deleted_at IS NULL;
 
 -- 自动 updated_at
+DROP TRIGGER IF EXISTS trg_tenants_updated_at ON tenants;
 CREATE TRIGGER trg_tenants_updated_at
     BEFORE UPDATE ON tenants
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -102,6 +103,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_app_id
 CREATE INDEX IF NOT EXISTS idx_accounts_status
     ON wechat_accounts(auth_status) WHERE deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_wechat_accounts_updated_at ON wechat_accounts;
 CREATE TRIGGER trg_wechat_accounts_updated_at
     BEFORE UPDATE ON wechat_accounts
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -148,6 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_auto_reply_account_status
 CREATE INDEX IF NOT EXISTS idx_auto_reply_keyword
     ON auto_reply_rules(account_id, keyword) WHERE status = 1 AND deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_auto_reply_rules_updated_at ON auto_reply_rules;
 CREATE TRIGGER trg_auto_reply_rules_updated_at
     BEFORE UPDATE ON auto_reply_rules
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -189,6 +192,7 @@ CREATE INDEX IF NOT EXISTS idx_channels_account
 CREATE UNIQUE INDEX IF NOT EXISTS idx_channels_slug
     ON cms_channels(account_id, slug) WHERE deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_cms_channels_updated_at ON cms_channels;
 CREATE TRIGGER trg_cms_channels_updated_at
     BEFORE UPDATE ON cms_channels
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -254,6 +258,7 @@ CREATE INDEX IF NOT EXISTS idx_articles_templates
     ON cms_articles(account_id, template_cat)
     WHERE is_template = TRUE AND deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_cms_articles_updated_at ON cms_articles;
 CREATE TRIGGER trg_cms_articles_updated_at
     BEFORE UPDATE ON cms_articles
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -284,6 +289,7 @@ CREATE TABLE IF NOT EXISTS quicknews_channels (
 CREATE INDEX IF NOT EXISTS idx_qn_channels_account
     ON quicknews_channels(account_id, sort_order) WHERE deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_quicknews_channels_updated_at ON quicknews_channels;
 CREATE TRIGGER trg_quicknews_channels_updated_at
     BEFORE UPDATE ON quicknews_channels
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -319,6 +325,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_qn_users_account_openid
 CREATE INDEX IF NOT EXISTS idx_qn_users_account
     ON quicknews_users(account_id, created_at DESC);
 
+DROP TRIGGER IF EXISTS trg_quicknews_users_updated_at ON quicknews_users;
 CREATE TRIGGER trg_quicknews_users_updated_at
     BEFORE UPDATE ON quicknews_users
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -370,6 +377,7 @@ CREATE INDEX IF NOT EXISTS idx_qn_news_user
     ON quicknews_news(user_id, created_at DESC)
     WHERE user_id IS NOT NULL AND deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_quicknews_news_updated_at ON quicknews_news;
 CREATE TRIGGER trg_quicknews_news_updated_at
     BEFORE UPDATE ON quicknews_news
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -459,6 +467,7 @@ CREATE INDEX IF NOT EXISTS idx_qn_comments_user
     ON quicknews_comments(user_id, created_at DESC)
     WHERE deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_quicknews_comments_updated_at ON quicknews_comments;
 CREATE TRIGGER trg_quicknews_comments_updated_at
     BEFORE UPDATE ON quicknews_comments
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -501,6 +510,7 @@ CREATE INDEX IF NOT EXISTS idx_votes_time_range
     ON votes(status, start_time, end_time)
     WHERE deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_votes_updated_at ON votes;
 CREATE TRIGGER trg_votes_updated_at
     BEFORE UPDATE ON votes
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -597,6 +607,7 @@ CREATE INDEX IF NOT EXISTS idx_materials_media_id
     ON materials(account_id, media_id)
     WHERE media_id IS NOT NULL AND deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS trg_materials_updated_at ON materials;
 CREATE TRIGGER trg_materials_updated_at
     BEFORE UPDATE ON materials
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -632,6 +643,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sys_config_key
 CREATE INDEX IF NOT EXISTS idx_sys_config_account
     ON system_configs(account_id) WHERE account_id IS NOT NULL;
 
+DROP TRIGGER IF EXISTS trg_system_configs_updated_at ON system_configs;
 CREATE TRIGGER trg_system_configs_updated_at
     BEFORE UPDATE ON system_configs
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
