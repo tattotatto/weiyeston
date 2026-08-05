@@ -24,6 +24,7 @@ COMMENT ON TABLE wechat_menus IS '微信自定义菜单';
 COMMENT ON COLUMN wechat_menus.menu_json IS '微信菜单 JSON 结构: {button: [{type, name, key/url/sub_button}]}';
 COMMENT ON COLUMN wechat_menus.status IS '0=草稿 1=已发布';
 
+DROP TRIGGER IF EXISTS trg_wechat_menus_updated_at ON wechat_menus;
 CREATE TRIGGER trg_wechat_menus_updated_at
     BEFORE UPDATE ON wechat_menus
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
