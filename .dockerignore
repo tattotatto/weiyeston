@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Node
+web/admin/node_modules
+web/admin/dist
+
+# Go
+*.exe
+*.test
+*.out
+bin/
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Uploads（运行时 mount）
+uploads/
+
+# Docker
+docker-compose*.yml
+docker-compose.override.yml
+.gitignore
+
+# Docs
+docs/
+
+# Coverage
+coverage.out
+*.coverprofile
+
+# Temp
+tmp/
+temp/
