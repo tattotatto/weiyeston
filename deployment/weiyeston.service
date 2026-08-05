@@ -1,0 +1,30 @@
+[Unit]
+Description=微盈通 V2 API Server
+After=network.target postgresql.service redis.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=weiyeston
+Group=weiyeston
+WorkingDirectory=/opt/weiyeston
+ExecStart=/opt/weiyeston/weiyeston --config=/opt/weiyeston/config.yaml
+Restart=always
+RestartSec=5
+Environment=WEIYESTON_JWT_SECRET=change-me-in-production
+Environment=WEIYESTON_DATABASE_PASSWORD=change-me-in-production
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/weiyeston/uploads /var/log/weiyeston
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=weiyeston
+
+[Install]
+WantedBy=multi-user.target

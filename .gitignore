@@ -1,0 +1,42 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test coverage
+coverage.out
+*.coverprofile
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+
+# Node
+web/admin/node_modules/
+web/admin/dist/
+
+# Uploads
+uploads/
+
+# Environment
+.env
+.env.local
+*.local.yaml
+
+# Docker
+docker-compose.override.yml
+
+# Temp
+tmp/
+temp/

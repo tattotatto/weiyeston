@@ -1,0 +1,164 @@
+{{define "head"}}
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f5f5; color: #333; }
+  .vote-container { max-width: 720px; margin: 0 auto; padding: 24px 16px; background: #fff; min-height: 100vh; }
+  .vote-header { text-align: center; margin-bottom: 24px; }
+  .vote-cover { width: 100%; border-radius: 8px; margin-bottom: 16px; max-height: 240px; object-fit: cover; }
+  .vote-title { font-size: 22px; font-weight: bold; color: #333; margin-bottom: 8px; }
+  .vote-desc { font-size: 14px; color: #666; margin-bottom: 8px; line-height: 1.6; }
+  .vote-rules { font-size: 12px; color: #999; }
+  .vote-rules span { display: inline-block; margin: 0 8px; }
+  .option-list { margin-bottom: 20px; }
+  .option-item { padding: 14px 16px; margin-bottom: 10px; border: 2px solid #e8e8e8; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; position: relative; }
+  .option-item:hover { border-color: #91caff; background: #f0f8ff; }
+  .option-item.selected { border-color: #1890ff; background: #e6f7ff; }
+  .option-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #d9d9d9; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .option-item.selected .option-check { border-color: #1890ff; background: #1890ff; }
+  .option-item.selected .option-check::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+  .option-image { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+  .option-body { flex: 1; min-width: 0; }
+  .option-content { font-size: 16px; color: #333; }
+  .option-count { font-size: 13px; color: #999; margin-top: 2px; }
+  .progress-bar { height: 6px; background: #f0f0f0; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1890ff; border-radius: 3px; transition: width 0.3s; }
+  .submit-btn { width: 100%; padding: 14px; background: #1890ff; color: #fff; border: none; border-radius: 10px; font-size: 17px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+  .submit-btn:disabled { background: #d9d9d9; cursor: not-allowed; }
+  .submit-btn:active { opacity: 0.8; }
+  .vote-ended-banner { text-align: center; padding: 12px; background: #fff2f0; border: 1px solid #ffccc7; border-radius: 8px; margin-bottom: 16px; color: #ff4d4f; font-size: 14px; }
+  .vote-total { text-align: center; font-size: 14px; color: #999; margin-top: 16px; }
+</style>
+{{end}}
+
+{{define "body"}}
+<div class="vote-container">
+    {{if .Vote.CoverURL}}
+    <img class="vote-cover" src="{{.Vote.CoverURL}}" alt="{{.Vote.Title}}" />
+    {{end}}
+
+    <div class="vote-header">
+        <h1 class="vote-title">{{.Vote.Title}}</h1>
+        {{if .Vote.Description}}<p class="vote-desc">{{.Vote.Description}}</p>{{end}}
+        <div class="vote-rules">
+            <span>{{if eq .Vote.VoteType 1}}单选{{else}}多选{{end}}</span>
+            <span>最多选 {{.Vote.MaxChoices}} 项</span>
+            {{if .Vote.MaxVotes}}<span>每人{{.Vote.MaxVotes}}次</span>{{end}}
+        </div>
+    </div>
+
+    {{if .VoteEnded}}
+    <div class="vote-ended-banner">投票已结束</div>
+    {{end}}
+
+    <ul class="option-list">
+        {{range $idx, $opt := .Options}}
+        <li class="option-item {{if not $.VoteEnded}}clickable{{end}}"
+            data-id="{{$opt.ID}}"
+            {{if not $.VoteEnded}}onclick="selectOption(this, {{$opt.ID}}, {{$.Vote.VoteType}}, {{$.Vote.MaxChoices}})"{{end}}>
+            <div class="option-check"></div>
+            {{if $opt.ImageURL}}<img class="option-image" src="{{$opt.ImageURL}}" alt="" />{{end}}
+            <div class="option-body">
+                <div class="option-content">{{$opt.Content}}</div>
+                {{if $.ShowResults}}
+                <div class="option-count">{{$opt.VoteCount}} 票</div>
+                <div class="progress-bar">
+                    {{$pct := percent $opt.VoteCount $.TotalVotes}}
+                    <div class="progress-fill" style="width: {{$pct}}%"></div>
+                </div>
+                {{end}}
+            </div>
+        </li>
+        {{end}}
+    </ul>
+
+    {{if not .VoteEnded}}
+    <button class="submit-btn" id="submitBtn" onclick="submitVote({{.Vote.ID}})" disabled>请选择选项</button>
+    {{end}}
+
+    {{if .ShowResults}}
+    <div class="vote-total">共 {{.TotalVotes}} 人参与投票</div>
+    {{end}}
+</div>
+
+<script>
+var selectedOptions = [];
+
+function selectOption(el, optId, voteType, maxChoices) {
+  if (voteType === 1) {
+    // Single select
+    document.querySelectorAll('.option-item').forEach(function(item) {
+      item.classList.remove('selected');
+      item.querySelector('.option-check').style.borderColor = '#d9d9d9';
+    });
+    selectedOptions = [optId];
+    el.classList.add('selected');
+  } else {
+    // Multi select
+    var idx = selectedOptions.indexOf(optId);
+    if (idx >= 0) {
+      selectedOptions.splice(idx, 1);
+      el.classList.remove('selected');
+    } else {
+      if (selectedOptions.length >= maxChoices) {
+        // Remove first selection
+        var removed = selectedOptions.shift();
+        var removedEl = document.querySelector('.option-item[data-id="' + removed + '"]');
+        if (removedEl) removedEl.classList.remove('selected');
+      }
+      selectedOptions.push(optId);
+      el.classList.add('selected');
+    }
+  }
+  document.getElementById('submitBtn').disabled = selectedOptions.length === 0;
+}
+
+function submitVote(voteId) {
+  if (selectedOptions.length === 0) {
+    alert('请选择至少一个选项');
+    return;
+  }
+
+  // For H5, openid should come from WeChat OAuth
+  var openid = getQueryParam('openid') || getCookie('wx_openid') || '';
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+
+  fetch('/h5/vote/' + voteId + '/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      option_ids: selectedOptions,
+      openid: openid
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.code === 0) {
+      alert('投票成功!');
+      location.reload();
+    } else {
+      alert(data.msg || '投票失败');
+      btn.disabled = false;
+      btn.textContent = '提交投票';
+    }
+  })
+  .catch(function() {
+    alert('网络错误，请重试');
+    btn.disabled = false;
+    btn.textContent = '提交投票';
+  });
+}
+
+function getQueryParam(name) {
+  var match = location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+function getCookie(name) {
+  var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : '';
+}
+</script>
+{{end}}

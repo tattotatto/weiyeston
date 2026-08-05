@@ -1,0 +1,73 @@
+# config.prod.yaml — 生产环境配置模板
+# 生产环境敏感值通过环境变量 WEIYESTON_XXX 注入，不写入此文件
+
+server:
+  port: 8080
+  mode: release
+  read_timeout: 30s
+  write_timeout: 60s
+
+database:
+  host: ""              # 通过 WEIYESTON_DATABASE_HOST 注入
+  port: 5432
+  user: ""              # 通过 WEIYESTON_DATABASE_USER 注入
+  password: ""          # 通过 WEIYESTON_DATABASE_PASSWORD 注入
+  dbname: ""            # 通过 WEIYESTON_DATABASE_DBNAME 注入
+  sslmode: require
+  max_open_conns: 50
+  max_idle_conns: 10
+  conn_max_lifetime: 5m
+
+redis:
+  addr: ""              # 通过 WEIYESTON_REDIS_ADDR 注入
+  password: ""          # 通过 WEIYESTON_REDIS_PASSWORD 注入
+  db: 0
+  pool_size: 20
+
+jwt:
+  secret: ""            # 通过 WEIYESTON_JWT_SECRET 注入
+  expiration: 24h
+  issuer: weiyeston-v2
+
+wechat:
+  component_app_id: ""     # 通过 WEIYESTON_WECHAT_COMPONENT_APP_ID 注入
+  component_app_secret: "" # 通过 WEIYESTON_WECHAT_COMPONENT_APP_SECRET 注入
+  token: ""                # 通过 WEIYESTON_WECHAT_TOKEN 注入
+  encoding_aes_key: ""     # 通过 WEIYESTON_WECHAT_ENCODING_AES_KEY 注入
+  server_url: ""           # 通过 WEIYESTON_WECHAT_SERVER_URL 注入
+
+upload:
+  driver: s3
+  local_path: /data/uploads
+  max_size_mb: 50
+  s3_endpoint: ""       # 通过 WEIYESTON_UPLOAD_S3_ENDPOINT 注入
+  s3_bucket: ""         # 通过 WEIYESTON_UPLOAD_S3_BUCKET 注入
+  s3_region: ""         # 通过 WEIYESTON_UPLOAD_S3_REGION 注入
+  s3_key: ""            # 通过 WEIYESTON_UPLOAD_S3_KEY 注入
+  s3_secret: ""         # 通过 WEIYESTON_UPLOAD_S3_SECRET 注入
+
+log:
+  level: info
+  format: json
+  output: stdout
+
+ai:
+  provider: ""          # 通过 WEIYESTON_AI_PROVIDER 注入
+  base_url: ""          # 通过 WEIYESTON_AI_BASE_URL 注入
+  api_key: ""           # 通过 WEIYESTON_AI_API_KEY 注入
+  model: ""             # 通过 WEIYESTON_AI_MODEL 注入
+  timeout: 60s
+
+cors:
+  allowed_origins:
+    - ""                # 通过 WEIYESTON_CORS_ALLOWED_ORIGINS 注入（逗号分隔）
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - Authorization
+    - Content-Type
+    - X-Requested-With

@@ -1,0 +1,73 @@
+{{define "head"}}
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f5f5; color: #333; }
+  .news-container { max-width: 720px; margin: 0 auto; min-height: 100vh; background: #fff; }
+  .news-header { padding: 16px; border-bottom: 1px solid #eee; text-align: center; }
+  .news-header h1 { font-size: 22px; font-weight: bold; }
+  .news-header .subtitle { font-size: 13px; color: #999; margin-top: 4px; }
+  .news-list { padding: 0 16px; }
+  .news-item { padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 12px; }
+  .news-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1890ff; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; overflow: hidden; }
+  .news-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .news-body { flex: 1; min-width: 0; }
+  .news-author { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 4px; }
+  .news-content { font-size: 15px; color: #555; line-height: 1.6; word-wrap: break-word; margin-bottom: 8px; }
+  .news-content a { color: #1890ff; }
+  .news-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
+  .news-photos img { width: 100%; border-radius: 4px; aspect-ratio: 1; object-fit: cover; }
+  .news-meta { display: flex; gap: 16px; font-size: 12px; color: #bbb; }
+  .news-meta-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .news-meta-item.liked { color: #ff4d4f; }
+  .news-top-badge { display: inline-block; background: #ff4d4f; color: #fff; padding: 1px 6px; border-radius: 3px; font-size: 11px; margin-right: 6px; }
+  .empty-state { text-align: center; padding: 40px 0; color: #999; }
+</style>
+{{end}}
+
+{{define "body"}}
+<div class="news-container">
+    <div class="news-header">
+        <h1>快讯</h1>
+        <div class="subtitle">{{.AccountName}}</div>
+    </div>
+
+    {{if .News}}
+    <div class="news-list">
+        {{range .News}}
+        <div class="news-item">
+            <div class="news-avatar">
+                {{if .AuthorAvatar}}<img src="{{.AuthorAvatar}}" alt="" />{{else}}{{slice .AuthorName 0 1}}{{end}}
+            </div>
+            <div class="news-body">
+                <div class="news-author">
+                    {{if .IsTop}}<span class="news-top-badge">置顶</span>{{end}}
+                    {{.AuthorName}}
+                </div>
+                <div class="news-content">{{.Content}}</div>
+                <div class="news-meta">
+                    <span>{{.CreatedAt}}</span>
+                    <span class="news-meta-item" onclick="toggleLike({{.ID}}, this)">&#10084; <span class="like-count">{{.LikeCount}}</span></span>
+                </div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="empty-state">暂无快讯</div>
+    {{end}}
+</div>
+
+<script>
+function toggleLike(newsId, el) {
+  var countEl = el.querySelector('.like-count');
+  if (el.classList.contains('liked')) {
+    el.classList.remove('liked');
+    var cnt = parseInt(countEl.textContent) - 1;
+    countEl.textContent = cnt > 0 ? cnt : 0;
+  } else {
+    el.classList.add('liked');
+    countEl.textContent = parseInt(countEl.textContent) + 1;
+  }
+}
+</script>
+{{end}}
