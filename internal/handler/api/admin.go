@@ -59,15 +59,16 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 	}
 
 	type userItem struct {
-		ID          int64  `json:"id"`
-		Username    string `json:"username"`
-		Nickname    string `json:"nickname"`
-		Email       string `json:"email,omitempty"`
-		Role        string `json:"role"`
-		Status      int16  `json:"status"`
-		VipLevel    string `json:"vip_level"`
-		CreatedAt   string `json:"created_at"`
-		LastLoginAt string `json:"last_login_at,omitempty"`
+		ID          int64   `json:"id"`
+		Username    string  `json:"username"`
+		Nickname    string  `json:"nickname"`
+		Email       string  `json:"email,omitempty"`
+		Role        string  `json:"role"`
+		Status      int16   `json:"status"`
+		VipLevel    string  `json:"vip_level"`
+		VipEndTime  *string `json:"vip_end_time,omitempty"`
+		CreatedAt   string  `json:"created_at"`
+		LastLoginAt string  `json:"last_login_at,omitempty"`
 	}
 
 	list := make([]userItem, 0, len(users))
@@ -86,6 +87,10 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 		}
 		if u.Email != nil {
 			item.Email = *u.Email
+		}
+		if u.VipEndTime != nil {
+			t := u.VipEndTime.Format("2006-01-02 15:04:05")
+			item.VipEndTime = &t
 		}
 		if u.LastLoginAt != nil {
 			item.LastLoginAt = u.LastLoginAt.Format("2006-01-02T15:04:05Z")
