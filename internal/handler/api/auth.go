@@ -114,8 +114,18 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// 检查账号状态
-	if user.Status != 1 {
-		c.JSON(http.StatusForbidden, gin.H{"code": 40301, "msg": "账号已被停用"})
+	switch user.Status {
+	case 0:
+		c.JSON(http.StatusForbidden, gin.H{"code": 40301, "msg": "账号尚未审核通过，请等待管理员审核"})
+		return
+	case 2:
+		c.JSON(http.StatusForbidden, gin.H{"code": 40302, "msg": "账号已被停用，请联系管理员"})
+		return
+	}
+
+	// 检查VIP到期时间
+	if user.VipEndTime != nil && user.VipEndTime.Before(time.Now()) {
+		c.JSON(http.StatusForbidden, gin.H{"code": 40303, "msg": "会员已到期，请联系管理员续费"})
 		return
 	}
 
