@@ -40,33 +40,26 @@ function AdminLayout() {
   const isAccountRoute = accountId !== null && pathParts.length > 2;
 
   const selectedKey = useMemo(() => {
-    const parts = location.pathname.split('/').filter(Boolean);
-    if (parts[0] === 'accounts' && parts[1] && parts.length >= 3) {
-      // Account-scoped: highlight the full sub-path
-      return '/' + parts.join('/');
-    }
-    // For 2-level paths like /admin/users, keep the full path
-    if (parts.length >= 2) {
-      return '/' + parts.join('/');
-    }
-    return '/' + (parts[0] || 'dashboard');
+    const path = location.pathname;
+    // Return the full path as key for menu matching
+    return path;
   }, [location.pathname]);
 
   const menuItems = (): MenuItem[] => {
     if (isAdmin) {
       return [
-        { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+        { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '工作台' },
         { key: '/admin/users', icon: <UserOutlined />, label: '用户管理' },
       ];
     }
 
     const items: MenuItem[] = [
-      { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
-      { key: '/accounts', icon: <AccountBookOutlined />, label: '公众号列表' },
+      { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+      { key: '/admin/accounts', icon: <AccountBookOutlined />, label: '公众号列表' },
     ];
 
     if (isAccountRoute && accountId) {
-      const prefix = `/accounts/${accountId}`;
+      const prefix = `/admin/accounts/${accountId}`;
       items.push(
         { key: `${prefix}/dashboard`, icon: <AppstoreOutlined />, label: '公众号首页' },
         { key: `${prefix}/cms/channels`, icon: <FileTextOutlined />, label: '微官网' },

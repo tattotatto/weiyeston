@@ -23,7 +23,7 @@ function Login() {
       if (refresh_token) setRefreshToken(refresh_token);
       storeLogin(access_token, user);
       message.success(`欢迎回来，${user.nickname || user.username}`);
-      navigate('/dashboard', { replace: true });
+      navigate('/admin/dashboard', { replace: true });
     } catch {
       message.error('用户名或密码错误');
     } finally {

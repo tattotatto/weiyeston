@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
+      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'accounts', element: <AccountList /> },
       { path: 'accounts/create', element: <AccountCreate /> },
