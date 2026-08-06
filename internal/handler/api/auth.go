@@ -125,7 +125,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// 检查VIP到期时间
 	if user.VipEndTime != nil && user.VipEndTime.Before(time.Now()) {
-		c.JSON(http.StatusForbidden, gin.H{"code": 40303, "msg": "会员已到期，请联系管理员续费"})
+		c.JSON(http.StatusForbidden, gin.H{"code": 40303, "msg": "会员已到期，请联系管理员"})
 		return
 	}
 
