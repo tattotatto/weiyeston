@@ -3,6 +3,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -364,12 +365,13 @@ func Setup(deps *Dependencies) *gin.Engine {
 	r.GET("/admin/*filepath", func(c *gin.Context) { c.File("./web/admin/" + c.Param("filepath")) })
 	r.NoRoute(func(c *gin.Context) {
 		p := c.Request.URL.Path
-		if p == "/admin" || (len(p) > 6 && p[:7] == "/admin/") ||
-			p == "/login" || p == "/register" || p == "/" {
-			c.File("./web/admin/index.html")
+		// API/微信/H5路径不做SPA回退，返回标准404
+		if strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/wx/") || strings.HasPrefix(p, "/h5/") {
+			http.NotFound(c.Writer, c.Request)
 			return
 		}
-		http.NotFound(c.Writer, c.Request)
+		// 其他所有路径走SPA（React Router处理）
+		c.File("./web/admin/index.html")
 	})
 
 	// Static uploads
