@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, theme } from 'antd';
 import {
@@ -52,77 +52,33 @@ function AdminLayout() {
     return '/' + (parts[0] || 'dashboard');
   }, [location.pathname]);
 
-  const menuItems: MenuItem[] = useMemo(() => {
+  const menuItems = (): MenuItem[] => {
     if (isAdmin) {
       return [
-        {
-          key: '/dashboard',
-          icon: <DashboardOutlined />,
-          label: '工作台',
-        },
-        {
-          key: '/admin/users',
-          icon: <UserOutlined />,
-          label: '用户管理',
-        },
+        { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+        { key: '/admin/users', icon: <UserOutlined />, label: '用户管理' },
       ];
     }
 
-    // Non-admin: show main menu + account sub-menu when on account route
     const items: MenuItem[] = [
-      {
-        key: '/dashboard',
-        icon: <DashboardOutlined />,
-        label: '工作台',
-      },
-      {
-        key: '/accounts',
-        icon: <AccountBookOutlined />,
-        label: '公众号列表',
-      },
+      { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+      { key: '/accounts', icon: <AccountBookOutlined />, label: '公众号列表' },
     ];
 
     if (isAccountRoute && accountId) {
-      items.push({ type: 'divider' } as unknown as MenuItem);
-      items.push({
-        key: `/accounts/${accountId}/dashboard`,
-        icon: <AppstoreOutlined />,
-        label: '公众号首页',
-      });
-      items.push({
-        key: `/accounts/${accountId}/cms/channels`,
-        icon: <FileTextOutlined />,
-        label: '微官网',
-      });
-      items.push({
-        key: `/accounts/${accountId}/news`,
-        icon: <ThunderboltOutlined />,
-        label: '快讯',
-      });
-      items.push({
-        key: `/accounts/${accountId}/votes`,
-        icon: <BarChartOutlined />,
-        label: '投票',
-      });
-      items.push({
-        key: `/accounts/${accountId}/replies`,
-        icon: <MessageOutlined />,
-        label: '自动回复',
-      });
-      items.push({
-        key: `/accounts/${accountId}/menu`,
-        icon: <MenuFoldOutlined />,
-        label: '自定义菜单',
-      });
-      items.push({
-        key: `/accounts/${accountId}/materials`,
-        icon: <PictureOutlined />,
-        label: '素材管理',
-      });
+      const prefix = `/accounts/${accountId}`;
+      items.push(
+        { key: `${prefix}/dashboard`, icon: <AppstoreOutlined />, label: '公众号首页' },
+        { key: `${prefix}/cms/channels`, icon: <FileTextOutlined />, label: '微官网' },
+        { key: `${prefix}/news`, icon: <ThunderboltOutlined />, label: '快讯' },
+        { key: `${prefix}/votes`, icon: <BarChartOutlined />, label: '投票' },
+        { key: `${prefix}/replies`, icon: <MessageOutlined />, label: '自动回复' },
+        { key: `${prefix}/menu`, icon: <MenuFoldOutlined />, label: '自定义菜单' },
+        { key: `${prefix}/materials`, icon: <PictureOutlined />, label: '素材管理' },
+      );
     }
-
     return items;
-  }, [isAdmin, isAccountRoute, accountId]);
+  };
 
   const onMenuClick: MenuProps['onClick'] = ({ key }) => {
     // For account-scoped sub-menu keys, navigate directly
@@ -147,7 +103,7 @@ function AdminLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
-          items={menuItems}
+          items={menuItems()}
           onClick={onMenuClick}
         />
       </Sider>
