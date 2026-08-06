@@ -82,15 +82,24 @@ function AdminLayout() {
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
         <div style={{
-          height: 32,
-          margin: 16,
-          color: '#fff',
-          fontSize: collapsed ? 14 : 18,
-          fontWeight: 'bold',
-          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          height: 48,
+          margin: '16px 16px 8px',
           overflow: 'hidden',
         }}>
-          {collapsed ? '微盈' : '微盈通 V2'}
+          <img
+            src="https://ynhx.oss-cn-chengdu.aliyuncs.com/%E5%AE%8F%E6%9B%A6%E7%A7%91%E6%8A%80logo-08.png"
+            alt=""
+            style={{ width: 32, height: 32, borderRadius: 6, flexShrink: 0 }}
+          />
+          {!collapsed && (
+            <span style={{ color: '#fff', fontSize: 16, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+              微盈通 V2
+            </span>
+          )}
         </div>
         <Menu
           theme="dark"
