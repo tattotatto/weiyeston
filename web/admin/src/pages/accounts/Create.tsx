@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Form, Input, Button, Card, message, Space } from 'antd';
+import { useState, useEffect } from 'react';
+import { Form, Input, Button, Card, Alert, message, Space } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { createAccount, type CreateAccountParams } from '@/api/account';
@@ -9,27 +9,20 @@ function AccountCreate() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [serverIp, setServerIp] = useState('');
+
+  useEffect(() => {
+    getServerInfo().then(res => {
+      const ip = res.data.data?.public_ip;
+      if (ip) setServerIp(ip);
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (values: CreateAccountParams) => {
     setLoading(true);
     try {
       await createAccount(values);
       message.success('接入成功');
-
-      // 获取服务器公网 IP 并提示配置白名单
-      try {
-        const serverRes = await getServerInfo();
-        const publicIp = serverRes.data.data?.public_ip;
-        if (publicIp) {
-          message.info(
-            `请将以下IP加入微信公众号IP白名单: ${publicIp}`,
-            8,
-          );
-        }
-      } catch {
-        // IP 获取失败不影响主流程
-      }
-
       navigate('/admin/accounts', { replace: true });
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { msg?: string } } };
@@ -52,6 +45,24 @@ function AccountCreate() {
       <p style={{ color: '#666', marginBottom: 24 }}>
         填写微信公众号的 AppId 和 AppSecret 完成接入
       </p>
+
+      {serverIp && (
+        <Alert
+          type="warning"
+          showIcon
+          message="IP 白名单配置"
+          description={
+            <span>
+              请将以下服务器 IP 加入微信公众号后台「开发 → 基本配置 → IP 白名单」：
+              <code style={{ fontSize: 16, fontWeight: 'bold', margin: '0 8px', background: '#fff7e6', padding: '2px 8px', borderRadius: 4 }}>
+                {serverIp}
+              </code>
+              否则无法获取 access_token，公众号功能将不可用。
+            </span>
+          }
+          style={{ maxWidth: 640, marginBottom: 24 }}
+        />
+      )}
 
       <Card style={{ maxWidth: 640 }}>
         <Form
