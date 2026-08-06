@@ -9,17 +9,15 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
+	"github.com/weiyeston/weiyeston-v2/internal/cache"
 	"github.com/weiyeston/weiyeston-v2/internal/config"
 	"github.com/weiyeston/weiyeston-v2/internal/handler/api"
 	"github.com/weiyeston/weiyeston-v2/internal/handler/wx"
 	"github.com/weiyeston/weiyeston-v2/internal/middleware"
 	"github.com/weiyeston/weiyeston-v2/internal/repository/account"
 	"github.com/weiyeston/weiyeston-v2/internal/repository/reply"
-	"github.com/weiyeston/weiyeston-v2/internal/service/wechat"
-
-	"github.com/weiyeston/weiyeston-v2/internal/cache"
-
 	aiservice "github.com/weiyeston/weiyeston-v2/internal/service/ai"
+	"github.com/weiyeston/weiyeston-v2/internal/service/wechat"
 )
 
 // Dependencies dependency injection container
@@ -32,10 +30,13 @@ type Dependencies struct {
 	AIService     *aiservice.AIService
 }
 
-// Setup registers all routes and middleware, returns configured gin.Engine
-// Order: Recovery -> Logger -> CORS (global middleware)
-// Then health check, WeChat callback, H5 pages (no auth)
-// Finally admin API group (requires JWT auth)
+// Setup registers all routes and middleware, returns configured gin.Engine.
+// Route groups (in registration order):
+//  1. Public — health, WeChat callback, H5 pages (no auth)
+//  2. Auth — login, register, refresh (no JWT middleware)
+//  3. API v1 — JWT + Tenant middleware, then sub-groups for each feature
+//  4. Admin — RequireRole("admin") within API v1
+//  5. SPA — static file serving for the admin frontend
 func Setup(deps *Dependencies) *gin.Engine {
 	// Set Gin mode
 	gin.SetMode(deps.Config.Server.Mode)
@@ -47,27 +48,29 @@ func Setup(deps *Dependencies) *gin.Engine {
 	r.Use(middleware.Logger(deps.Logger))
 	r.Use(middleware.CORS(deps.Config.CORS))
 
-	// ============ Health check ============
-	healthHandler := api.NewHealthHandler(deps.DB, deps.Redis)
-	r.GET("/api/v1/health", healthHandler.Check)
-	r.GET("/api/health", healthHandler.Check)
+	// ============ Group 1: Public routes (no auth) ============
 
-	// ============ Root path -> admin SPA ============
+	// Health check
+	healthHandler := api.NewHealthHandler(deps.DB, deps.Redis)
+	r.GET("/api/health", healthHandler.Check)
+	r.GET("/api/v1/health", healthHandler.Check)
+
+	// Root redirect to admin SPA
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/admin") })
 
-	// ============ Test routes (dev/test environment) ============
+	// Test routes (dev/test environment only)
 	if deps.Config.Server.Mode != "release" {
 		testGroup := r.Group("/api/v1/__tests__")
 		registerTestRoutes(testGroup, deps)
 	}
 
-	// ============ WeChat callback (no auth, protected by WeChat signature) ============
-	// T3: WeChat third-party platform callback endpoint
+	// WeChat third-party platform callback (protected by WeChat signature, not JWT)
 	var componentHandler *wx.ComponentHandler
 	if deps.WechatService != nil {
 		componentHandler = wx.NewComponentHandler(deps.WechatService, deps.Logger)
 		r.POST("/wx/component/callback", componentHandler.HandleComponentCallback)
 	} else {
+		r.POST("/wx/component/callback", func(c *gin.Context) {
 			c.String(http.StatusOK, "wx component callback placeholder")
 		})
 	}
@@ -79,8 +82,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 		c.String(http.StatusOK, "wx callback message placeholder")
 	})
 
-	// ============ H5 display pages (no auth) ============
-	// Build H5 handlers (need VoteRepo for vote submit)
+	// H5 display pages (no auth)
 	var voteH5Handler *api.VoteHandler
 	if deps.DB != nil {
 		voteRepo := api.NewVoteRepo(deps.DB)
@@ -99,35 +101,35 @@ func Setup(deps *Dependencies) *gin.Engine {
 	if voteH5Handler != nil {
 		r.POST("/h5/vote/:id/submit", voteH5Handler.SubmitVote)
 	} else {
+		r.POST("/h5/vote/:id/submit", func(c *gin.Context) {
 			c.String(http.StatusOK, "h5 vote submit placeholder")
 		})
 	}
 
-	// ============ Auth routes (login/register/refresh independent of Auth middleware group) ============
+	// ============ Group 2: Auth routes (login/register/refresh — no JWT middleware) ============
 	authHandler := api.NewAuthHandler(deps.DB, deps.Redis, deps.Config.JWT)
 	r.POST("/api/v1/auth/login", authHandler.Login)
 	r.POST("/api/v1/auth/register", authHandler.Register)
 
-	// Admin and server info handlers
+	// /auth/refresh is independent — must accept expired tokens, so it cannot be inside the Auth group
+	r.POST("/api/v1/auth/refresh", authHandler.Refresh)
+
+	// ============ Group 3: API v1 (JWT + Tenant middleware) ============
 	adminHandler := api.NewAdminHandler(deps.DB)
 	serverHandler := api.NewServerHandler()
 
-	// /auth/refresh registered independently - cannot be in Auth middleware group (needs to accept expired tokens)
-	r.POST("/api/v1/auth/refresh", authHandler.Refresh)
-
-	// ============ Admin API (JWT auth) ============
 	v1 := r.Group("/api/v1")
 	v1.Use(middleware.Auth(deps.Config.JWT))
 	v1.Use(middleware.Tenant())
 	{
-		// Auth related (needs JWT)
+		// -- Auth (needs valid JWT) --
 		v1.GET("/auth/me", authHandler.Me)
 		v1.POST("/auth/logout", authHandler.Logout)
 
-		// Server info (needs auth, any role)
+		// -- Server info (any authenticated user) --
 		v1.GET("/server/info", serverHandler.GetInfo)
 
-		// Admin routes (requires admin role)
+		// -- Group 4: Admin routes (RequireRole("admin")) --
 		adminGroup := v1.Group("/admin")
 		adminGroup.Use(middleware.RequireRole("admin"))
 		{
@@ -135,7 +137,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			adminGroup.PUT("/users/:id", adminHandler.UpdateUser)
 		}
 
-		// WeChat account management
+		// -- WeChat account management --
 		var accountRepo *account.Repo
 		var accountHandler *api.AccountHandler
 		if deps.WechatService != nil {
@@ -145,13 +147,10 @@ func Setup(deps *Dependencies) *gin.Engine {
 		}
 
 		if accountHandler != nil {
-			// T3 existing
 			v1.POST("/accounts/auth-url", accountHandler.GenerateAuthURL)
-			// T4 full implementation
 			v1.GET("/accounts", accountHandler.List)
 			v1.POST("/accounts", accountHandler.Create)
 
-			// Account detail/edit/delete + replies/menu - needs ownership check
 			accountOwnership := func() gin.HandlerFunc {
 				if accountRepo != nil {
 					return middleware.CheckAccountOwnership(accountRepo)
@@ -165,24 +164,25 @@ func Setup(deps *Dependencies) *gin.Engine {
 				accountGroup.GET("/:id", accountHandler.GetByID)
 				accountGroup.PUT("/:id", accountHandler.Update)
 				accountGroup.DELETE("/:id", accountHandler.Delete)
-				// T3 existing - static routes before parameter routes
 				accountGroup.GET("/:id/auth-status", accountHandler.GetAuthStatus)
 			}
 		} else {
+			v1.POST("/accounts/auth-url", placeholderJSON)
+			v1.GET("/accounts", placeholderJSON)
+			v1.POST("/accounts", placeholderJSON)
 			v1.GET("/accounts/:id", placeholderJSON)
 			v1.PUT("/accounts/:id", placeholderJSON)
 			v1.DELETE("/accounts/:id", placeholderJSON)
 			v1.GET("/accounts/:id/auth-status", placeholderJSON)
 		}
 
-		// T5: Auto-reply rules
+		// -- Auto-reply rules --
 		var replyHandler *api.ReplyHandler
 		if deps.DB != nil {
 			replyRepo := &reply.Repo{DB: deps.DB}
 			replyHandler = api.NewReplyHandler(replyRepo, deps.Logger)
 		}
 		if replyHandler != nil {
-			// Reply routes need account ownership check
 			replyOwnership := func() gin.HandlerFunc {
 				if accountRepo != nil {
 					return middleware.CheckAccountOwnership(accountRepo)
@@ -201,16 +201,17 @@ func Setup(deps *Dependencies) *gin.Engine {
 		} else {
 			v1.GET("/accounts/:id/replies", placeholderJSON)
 			v1.POST("/accounts/:id/replies", placeholderJSON)
+			v1.PUT("/replies/:id", placeholderJSON)
+			v1.DELETE("/replies/:id", placeholderJSON)
 		}
 
-		// T6: WeChat custom menu
+		// -- WeChat custom menu --
 		var menuHandler *api.MenuHandler
 		if deps.DB != nil {
 			menuRepo := api.NewMenuRepo(deps.DB)
 			menuHandler = api.NewMenuHandler(menuRepo, deps.Logger)
 		}
 		if menuHandler != nil {
-			// Menu routes need account ownership check
 			menuOwnership := func() gin.HandlerFunc {
 				if accountRepo != nil {
 					return middleware.CheckAccountOwnership(accountRepo)
@@ -233,7 +234,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/accounts/:id/menu", placeholderJSON)
 		}
 
-		// T12: Micro-website CMS
+		// -- Micro-website CMS --
 		var cmsHandler *api.CMSHandler
 		if deps.DB != nil {
 			cmsRepo := &api.CMSRepoDB{DB: deps.DB}
@@ -251,9 +252,19 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/cms/articles/:id", cmsHandler.DeleteArticle)
 			v1.GET("/cms/articles/:id/preview", cmsHandler.PreviewArticle)
 		} else {
+			v1.GET("/cms/channels", placeholderJSON)
+			v1.POST("/cms/channels", placeholderJSON)
+			v1.PUT("/cms/channels/:id", placeholderJSON)
+			v1.DELETE("/cms/channels/:id", placeholderJSON)
+			v1.GET("/cms/articles", placeholderJSON)
+			v1.POST("/cms/articles", placeholderJSON)
+			v1.GET("/cms/articles/:id", placeholderJSON)
+			v1.PUT("/cms/articles/:id", placeholderJSON)
+			v1.DELETE("/cms/articles/:id", placeholderJSON)
+			v1.GET("/cms/articles/:id/preview", placeholderJSON)
 		}
 
-		// T14: Voting
+		// -- Voting --
 		var voteHandler *api.VoteHandler
 		if deps.DB != nil {
 			voteRepo := api.NewVoteRepo(deps.DB)
@@ -267,9 +278,15 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/votes/:id", voteHandler.DeleteVote)
 			v1.GET("/votes/:id/results", voteHandler.GetResults)
 		} else {
+			v1.GET("/votes", placeholderJSON)
+			v1.POST("/votes", placeholderJSON)
+			v1.GET("/votes/:id", placeholderJSON)
+			v1.PUT("/votes/:id", placeholderJSON)
+			v1.DELETE("/votes/:id", placeholderJSON)
+			v1.GET("/votes/:id/results", placeholderJSON)
 		}
 
-		// T7: Material management
+		// -- Material management --
 		var materialHandler *api.MaterialHandler
 		if deps.DB != nil {
 			materialRepo := api.NewMaterialRepo(deps.DB)
@@ -285,9 +302,13 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.GET("/materials/:id", materialHandler.GetByID)
 			v1.DELETE("/materials/:id", materialHandler.Delete)
 		} else {
+			v1.GET("/materials", placeholderJSON)
+			v1.POST("/materials/upload", placeholderJSON)
+			v1.GET("/materials/:id", placeholderJSON)
+			v1.DELETE("/materials/:id", placeholderJSON)
 		}
 
-		// T10: Template system
+		// -- Template system --
 		var templateHandler *api.TemplateHandler
 		if deps.DB != nil {
 			templateHandler = api.NewTemplateHandler(deps.DB)
@@ -296,9 +317,11 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.GET("/templates", templateHandler.ListSystemTemplates)
 			v1.POST("/templates", templateHandler.SaveTemplate)
 		} else {
+			v1.GET("/templates", placeholderJSON)
+			v1.POST("/templates", placeholderJSON)
 		}
 
-		// T11: AI integration
+		// -- AI integration --
 		var aiHandler *api.AIHandler
 		if deps.AIService != nil {
 			aiHandler = api.NewAIHandler(deps.AIService)
@@ -308,9 +331,12 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.POST("/ai/layout", aiHandler.Layout)
 			v1.POST("/ai/proofread", aiHandler.Proofread)
 		} else {
+			v1.POST("/ai/write", placeholderJSON)
+			v1.POST("/ai/layout", placeholderJSON)
+			v1.POST("/ai/proofread", placeholderJSON)
 		}
 
-		// T13: Quick news
+		// -- Quick news --
 		var newsHandler *api.NewsHandler
 		if deps.DB != nil {
 			newsRepo := api.NewNewsRepo(deps.DB)
@@ -324,18 +350,16 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/news/:id", newsHandler.DeleteNews)
 			v1.GET("/quicknews/users", newsHandler.ListUsers)
 		} else {
-		}
-
-		// 服务器信息
-
-		// 管理员路由（需要 admin 角色）
-		admin := v1.Group("/admin")
-		admin.Use(middleware.RequireRole("admin"))
-		{
+			v1.GET("/news", placeholderJSON)
+			v1.POST("/news", placeholderJSON)
+			v1.GET("/news/:id", placeholderJSON)
+			v1.PUT("/news/:id", placeholderJSON)
+			v1.DELETE("/news/:id", placeholderJSON)
+			v1.GET("/quicknews/users", placeholderJSON)
 		}
 	}
 
-	// ============ 管理后台 SPA ============
+	// ============ Group 5: SPA static files ============
 	r.GET("/admin", func(c *gin.Context) { c.File("./web/admin/index.html") })
 	r.GET("/admin/*filepath", func(c *gin.Context) { c.File("./web/admin/" + c.Param("filepath")) })
 	r.NoRoute(func(c *gin.Context) {
@@ -346,12 +370,15 @@ func Setup(deps *Dependencies) *gin.Engine {
 		}
 		http.NotFound(c.Writer, c.Request)
 	})
-	// ============ Upload files ============
+
+	// Static uploads
 	r.Static("/uploads", "./uploads")
+
 	return r
 }
 
-// placeholderJSON placeholder JSON handler for unimplemented handlers (T0 phase)
+// placeholderJSON placeholder handler for routes whose real handler cannot be constructed
+// (e.g. when DB / external service dependency is nil).
 func placeholderJSON(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
@@ -360,7 +387,7 @@ func placeholderJSON(c *gin.Context) {
 	})
 }
 
-// registerTestRoutes registers test routes only in non-release mode
+// registerTestRoutes registers test routes only in non-release mode.
 func registerTestRoutes(r *gin.RouterGroup, deps *Dependencies) {
 	// Database connection status
 	r.GET("/db/status", func(c *gin.Context) {
@@ -380,7 +407,6 @@ func registerTestRoutes(r *gin.RouterGroup, deps *Dependencies) {
 
 	// Config desensitization endpoint
 	r.GET("/config", func(c *gin.Context) {
-		// Return desensitized config
 		safe := *deps.Config
 		safe.Database.Password = "***"
 		safe.Redis.Password = "***"
