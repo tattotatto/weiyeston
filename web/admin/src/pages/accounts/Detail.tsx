@@ -34,7 +34,7 @@ function AccountDetail() {
     try {
       await deleteAccount(Number(id));
       message.success('删除成功');
-      navigate('/accounts', { replace: true });
+      navigate('/admin/accounts', { replace: true });
     } catch {
       message.error('删除失败');
     }
@@ -55,14 +55,14 @@ function AccountDetail() {
   return (
     <div>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/accounts')}>
+        <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/accounts')}>
           返回列表
         </Button>
         <Space>
           <Button
             type="primary"
             icon={<EditOutlined />}
-            onClick={() => navigate(`/accounts/${id}/edit`)}
+            onClick={() => navigate(`/admin/accounts/${id}/edit`)}
           >
             编辑
           </Button>

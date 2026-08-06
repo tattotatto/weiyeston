@@ -302,7 +302,7 @@ function MenuEditor() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/accounts/${accountId}`)}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/admin/accounts/${accountId}`)}>
             返回
           </Button>
           <h2 style={{ margin: 0 }}>自定义菜单管理</h2>

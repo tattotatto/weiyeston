@@ -130,7 +130,7 @@ function AccountList() {
             type="link"
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/accounts/${record.id}`)}
+            onClick={() => navigate(`/admin/accounts/${record.id}`)}
           >
             详情
           </Button>
@@ -138,7 +138,7 @@ function AccountList() {
             type="link"
             size="small"
             icon={<EditOutlined />}
-            onClick={() => navigate(`/accounts/${record.id}/edit`)}
+            onClick={() => navigate(`/admin/accounts/${record.id}/edit`)}
           >
             编辑
           </Button>
@@ -162,7 +162,7 @@ function AccountList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2>公众号管理</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/accounts/create')}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/admin/accounts/create')}>
           添加公众号
         </Button>
       </div>
@@ -214,7 +214,7 @@ function AccountList() {
         onChange={handleTableChange}
         onRow={(record) => ({
           style: { cursor: 'pointer' },
-          onClick: () => navigate(`/accounts/${record.id}/dashboard`),
+          onClick: () => navigate(`/admin/accounts/${record.id}/dashboard`),
         })}
         pagination={{
           current: page,

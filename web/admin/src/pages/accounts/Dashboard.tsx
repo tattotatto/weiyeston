@@ -94,7 +94,7 @@ function AccountDashboard() {
     return (
       <div style={{ textAlign: 'center', padding: 100 }}>
         <p>公众号不存在</p>
-        <a onClick={() => navigate('/accounts')}>返回列表</a>
+        <a onClick={() => navigate('/admin/accounts')}>返回列表</a>
       </div>
     );
   }
@@ -104,7 +104,7 @@ function AccountDashboard() {
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
         <ArrowLeftOutlined
           style={{ cursor: 'pointer', fontSize: 16 }}
-          onClick={() => navigate('/accounts')}
+          onClick={() => navigate('/admin/accounts')}
         />
         <div>
           <Title level={3} style={{ margin: 0 }}>
@@ -140,7 +140,7 @@ function AccountDashboard() {
           <Col key={mod.key} xs={24} sm={12} lg={8}>
             <Card
               hoverable
-              onClick={() => navigate(`/accounts/${id}/${mod.path}`)}
+              onClick={() => navigate(`/admin/accounts/${id}/${mod.path}`)}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 {mod.icon}

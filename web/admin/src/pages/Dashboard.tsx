@@ -10,7 +10,7 @@ function Dashboard() {
     if (user?.role === 'admin') {
       navigate('/admin/users', { replace: true });
     } else {
-      navigate('/accounts', { replace: true });
+      navigate('/admin/accounts', { replace: true });
     }
   }, [user, navigate]);
 

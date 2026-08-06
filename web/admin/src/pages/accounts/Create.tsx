@@ -30,7 +30,7 @@ function AccountCreate() {
         // IP 获取失败不影响主流程
       }
 
-      navigate('/accounts', { replace: true });
+      navigate('/admin/accounts', { replace: true });
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { msg?: string } } };
       const msg = axiosError.response?.data?.msg || '接入失败，请重试';
@@ -43,7 +43,7 @@ function AccountCreate() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/accounts')}>
+        <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/accounts')}>
           返回列表
         </Button>
       </div>
@@ -133,7 +133,7 @@ function AccountCreate() {
               <Button type="primary" htmlType="submit" loading={loading}>
                 验证并保存
               </Button>
-              <Button onClick={() => navigate('/accounts')}>
+              <Button onClick={() => navigate('/admin/accounts')}>
                 取消
               </Button>
             </Space>
