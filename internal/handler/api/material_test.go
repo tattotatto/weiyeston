@@ -10,8 +10,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -71,6 +69,35 @@ func (m *mockMaterialRepo) CountByAccount(ctx context.Context, accountID int64, 
 	return 0, nil
 }
 
+// ========== Mock Storage Provider ==========
+
+type mockStorageProvider struct {
+	uploadFn func(ctx context.Context, key string, reader io.Reader, contentType string) (string, error)
+	deleteFn func(ctx context.Context, key string) error
+	getURLFn  func(key string) string
+}
+
+func (m *mockStorageProvider) Upload(ctx context.Context, key string, reader io.Reader, contentType string) (string, error) {
+	if m.uploadFn != nil {
+		return m.uploadFn(ctx, key, reader, contentType)
+	}
+	return "/uploads/" + key, nil
+}
+
+func (m *mockStorageProvider) Delete(ctx context.Context, key string) error {
+	if m.deleteFn != nil {
+		return m.deleteFn(ctx, key)
+	}
+	return nil
+}
+
+func (m *mockStorageProvider) GetURL(key string) string {
+	if m.getURLFn != nil {
+		return m.getURLFn(key)
+	}
+	return "/uploads/" + key
+}
+
 // ========== Helpers ==========
 
 func setupMaterialTestRouter(handler *MaterialHandler) *gin.Engine {
@@ -89,9 +116,7 @@ func setupMaterialTestRouter(handler *MaterialHandler) *gin.Engine {
 }
 
 func newMaterialHandler(repo MaterialRepo) *MaterialHandler {
-	tmpDir := filepath.Join(os.TempDir(), "weiyeston_test_uploads")
-	os.MkdirAll(tmpDir, 0755)
-	return NewMaterialHandler(repo, tmpDir, zap.NewNop())
+	return NewMaterialHandler(repo, &mockStorageProvider{}, zap.NewNop())
 }
 
 func sampleMaterials(count int, accountID int64) []model.Material {

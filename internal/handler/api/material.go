@@ -6,9 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/weiyeston/weiyeston-v2/internal/model"
+	"github.com/weiyeston/weiyeston-v2/internal/storage"
 )
 
 // MaterialRepo 素材数据访问接口（依赖注入 + 测试 mock）
@@ -142,17 +141,17 @@ func NewMaterialRepo(db *sqlx.DB) MaterialRepo {
 
 // MaterialHandler 素材管理 API 处理器
 type MaterialHandler struct {
-	materialRepo MaterialRepo
-	uploadDir    string
-	logger       *zap.Logger
+	materialRepo   MaterialRepo
+	storageProvider storage.Provider
+	logger         *zap.Logger
 }
 
 // NewMaterialHandler 创建素材 Handler
-func NewMaterialHandler(materialRepo MaterialRepo, uploadDir string, logger *zap.Logger) *MaterialHandler {
+func NewMaterialHandler(materialRepo MaterialRepo, storageProvider storage.Provider, logger *zap.Logger) *MaterialHandler {
 	return &MaterialHandler{
-		materialRepo: materialRepo,
-		uploadDir:    uploadDir,
-		logger:       logger,
+		materialRepo:   materialRepo,
+		storageProvider: storageProvider,
+		logger:         logger,
 	}
 }
 
@@ -357,36 +356,18 @@ func (h *MaterialHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	// 确保上传目录存在
-	if err := os.MkdirAll(h.uploadDir, 0755); err != nil {
-		h.logger.Error("创建上传目录失败", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": 50001,
-			"msg":  "服务器内部错误",
-			"data": nil,
-		})
-		return
-	}
-
 	// 生成唯一文件名：时间戳_原始文件名
 	uniqueName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), header.Filename)
-	savePath := filepath.Join(h.uploadDir, uniqueName)
 
-	out, err := os.Create(savePath)
-	if err != nil {
-		h.logger.Error("创建文件失败", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": 50001,
-			"msg":  "保存文件失败",
-			"data": nil,
-		})
-		return
+	// 通过存储驱动上传文件
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
-	defer out.Close()
 
-	written, err := io.Copy(out, file)
+	accessURL, err := h.storageProvider.Upload(c.Request.Context(), uniqueName, file, contentType)
 	if err != nil {
-		h.logger.Error("写入文件失败", zap.Error(err))
+		h.logger.Error("上传文件失败", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code": 50001,
 			"msg":  "保存文件失败",
@@ -397,9 +378,8 @@ func (h *MaterialHandler) Upload(c *gin.Context) {
 
 	// 构建 DB 记录
 	fileName := header.Filename
-	fileSize := written
+	fileSize := header.Size
 	formatStr := strings.TrimPrefix(ext, ".")
-	accessURL := "/uploads/" + uniqueName
 
 	material := &model.Material{
 		AccountID: accountID,
@@ -413,7 +393,9 @@ func (h *MaterialHandler) Upload(c *gin.Context) {
 	if err := h.materialRepo.Create(c.Request.Context(), material); err != nil {
 		h.logger.Error("保存素材记录失败", zap.Error(err))
 		// 清理已上传的文件
-		os.Remove(savePath)
+		if delErr := h.storageProvider.Delete(c.Request.Context(), uniqueName); delErr != nil {
+			h.logger.Error("清理已上传文件失败", zap.Error(delErr))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code": 50001,
 			"msg":  "保存素材记录失败",

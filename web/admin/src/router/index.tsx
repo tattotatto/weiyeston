@@ -24,6 +24,7 @@ import VoteList from '@/pages/vote/List';
 import VoteCreate from '@/pages/vote/Create';
 // Admin
 import UserList from '@/pages/admin/UserList';
+import Settings from '@/pages/admin/Settings';
 
 export const router = createBrowserRouter([
   {
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
       { path: 'votes/create', element: <VoteCreate /> },
       // Super admin
       { path: 'users', element: <UserList /> },
+      { path: 'settings', element: <Settings /> },
       { path: '*', element: <Navigate to="/admin/dashboard" replace /> },
     ],
   },

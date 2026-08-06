@@ -26,6 +26,7 @@ wechat:
 upload:
   driver: local
   local_path: ./uploads
+  public_url: ""
 
 log:
   level: debug

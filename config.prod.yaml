@@ -40,6 +40,7 @@ upload:
   driver: s3
   local_path: /data/uploads
   max_size_mb: 50
+  public_url: ""
   s3_endpoint: ""       # 通过 WEIYESTON_UPLOAD_S3_ENDPOINT 注入
   s3_bucket: ""         # 通过 WEIYESTON_UPLOAD_S3_BUCKET 注入
   s3_region: ""         # 通过 WEIYESTON_UPLOAD_S3_REGION 注入

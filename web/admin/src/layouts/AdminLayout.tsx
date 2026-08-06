@@ -13,6 +13,7 @@ import {
   UserOutlined,
   MessageOutlined,
   AppstoreOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { removeToken } from '@/utils/token';
@@ -50,6 +51,7 @@ function AdminLayout() {
       return [
         { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '工作台' },
         { key: '/admin/users', icon: <UserOutlined />, label: '用户管理' },
+        { key: '/admin/settings', icon: <SettingOutlined />, label: '系统设置' },
       ];
     }
 

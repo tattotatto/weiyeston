@@ -112,6 +112,7 @@ type UploadConfig struct {
 	S3Region   string `mapstructure:"s3_region"   yaml:"s3_region"`
 	S3Key      string `mapstructure:"s3_key"      yaml:"s3_key"`
 	S3Secret   string `mapstructure:"s3_secret"   yaml:"s3_secret"`
+	PublicURL  string `mapstructure:"public_url"  yaml:"public_url"` // 自定义CDN域名
 }
 
 // ========== 日志配置 ==========
@@ -198,6 +199,7 @@ func setDefaults(v *viper.Viper) {
 	// upload 默认值
 	v.SetDefault("upload.driver", "local")
 	v.SetDefault("upload.max_size_mb", 20)
+	v.SetDefault("upload.public_url", "")
 
 	// log 默认值
 	v.SetDefault("log.level", "info")

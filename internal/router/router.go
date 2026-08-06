@@ -19,6 +19,7 @@ import (
 	"github.com/weiyeston/weiyeston-v2/internal/repository/reply"
 	aiservice "github.com/weiyeston/weiyeston-v2/internal/service/ai"
 	"github.com/weiyeston/weiyeston-v2/internal/service/wechat"
+	"github.com/weiyeston/weiyeston-v2/internal/storage"
 )
 
 // Dependencies dependency injection container
@@ -136,6 +137,19 @@ func Setup(deps *Dependencies) *gin.Engine {
 		{
 			adminGroup.GET("/users", adminHandler.ListUsers)
 			adminGroup.PUT("/users/:id", adminHandler.UpdateUser)
+
+			// Storage settings
+			var settingsHandler *api.SettingsHandler
+			if deps.DB != nil {
+				settingsHandler = api.NewSettingsHandler(deps.DB)
+			}
+			if settingsHandler != nil {
+				adminGroup.GET("/settings", settingsHandler.GetStorageConfig)
+				adminGroup.PUT("/settings", settingsHandler.UpdateStorageConfig)
+			} else {
+				adminGroup.GET("/settings", placeholderJSON)
+				adminGroup.PUT("/settings", placeholderJSON)
+			}
 		}
 
 		// -- WeChat account management --
@@ -291,11 +305,24 @@ func Setup(deps *Dependencies) *gin.Engine {
 		var materialHandler *api.MaterialHandler
 		if deps.DB != nil {
 			materialRepo := api.NewMaterialRepo(deps.DB)
-			uploadDir := deps.Config.Upload.LocalPath
-			if uploadDir == "" {
-				uploadDir = "./uploads"
+
+			// 创建存储驱动
+			storageProvider, spErr := storage.NewProvider(storage.Config{
+				Driver:     deps.Config.Upload.Driver,
+				LocalPath:  deps.Config.Upload.LocalPath,
+				BaseURL:    "/uploads",
+				S3Endpoint: deps.Config.Upload.S3Endpoint,
+				S3Bucket:   deps.Config.Upload.S3Bucket,
+				S3Region:   deps.Config.Upload.S3Region,
+				S3Key:      deps.Config.Upload.S3Key,
+				S3Secret:   deps.Config.Upload.S3Secret,
+				PublicURL:  deps.Config.Upload.PublicURL,
+			})
+			if spErr != nil {
+				deps.Logger.Error("创建存储驱动失败，使用本地存储兜底", zap.Error(spErr))
+				storageProvider, _ = storage.NewProvider(storage.Config{Driver: "local"})
 			}
-			materialHandler = api.NewMaterialHandler(materialRepo, uploadDir, deps.Logger)
+			materialHandler = api.NewMaterialHandler(materialRepo, storageProvider, deps.Logger)
 		}
 		if materialHandler != nil {
 			v1.GET("/materials", materialHandler.List)
