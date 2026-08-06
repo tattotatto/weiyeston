@@ -68,7 +68,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 		componentHandler = wx.NewComponentHandler(deps.WechatService, deps.Logger)
 		r.POST("/wx/component/callback", componentHandler.HandleComponentCallback)
 	} else {
-		r.POST("/wx/component/callback", func(c *gin.Context) {
 			c.String(http.StatusOK, "wx component callback placeholder")
 		})
 	}
@@ -100,7 +99,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 	if voteH5Handler != nil {
 		r.POST("/h5/vote/:id/submit", voteH5Handler.SubmitVote)
 	} else {
-		r.POST("/h5/vote/:id/submit", func(c *gin.Context) {
 			c.String(http.StatusOK, "h5 vote submit placeholder")
 		})
 	}
@@ -171,9 +169,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 				accountGroup.GET("/:id/auth-status", accountHandler.GetAuthStatus)
 			}
 		} else {
-			v1.POST("/accounts/auth-url", placeholderJSON)
-			v1.GET("/accounts", placeholderJSON)
-			v1.POST("/accounts", placeholderJSON)
 			v1.GET("/accounts/:id", placeholderJSON)
 			v1.PUT("/accounts/:id", placeholderJSON)
 			v1.DELETE("/accounts/:id", placeholderJSON)
@@ -206,8 +201,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 		} else {
 			v1.GET("/accounts/:id/replies", placeholderJSON)
 			v1.POST("/accounts/:id/replies", placeholderJSON)
-			v1.PUT("/replies/:id", placeholderJSON)
-			v1.DELETE("/replies/:id", placeholderJSON)
 		}
 
 		// T6: WeChat custom menu
@@ -258,16 +251,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/cms/articles/:id", cmsHandler.DeleteArticle)
 			v1.GET("/cms/articles/:id/preview", cmsHandler.PreviewArticle)
 		} else {
-			v1.GET("/cms/channels", placeholderJSON)
-			v1.POST("/cms/channels", placeholderJSON)
-			v1.PUT("/cms/channels/:id", placeholderJSON)
-			v1.DELETE("/cms/channels/:id", placeholderJSON)
-			v1.GET("/cms/articles", placeholderJSON)
-			v1.POST("/cms/articles", placeholderJSON)
-			v1.GET("/cms/articles/:id", placeholderJSON)
-			v1.PUT("/cms/articles/:id", placeholderJSON)
-			v1.DELETE("/cms/articles/:id", placeholderJSON)
-			v1.GET("/cms/articles/:id/preview", placeholderJSON)
 		}
 
 		// T14: Voting
@@ -284,12 +267,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/votes/:id", voteHandler.DeleteVote)
 			v1.GET("/votes/:id/results", voteHandler.GetResults)
 		} else {
-			v1.GET("/votes", placeholderJSON)
-			v1.POST("/votes", placeholderJSON)
-			v1.GET("/votes/:id", placeholderJSON)
-			v1.PUT("/votes/:id", placeholderJSON)
-			v1.DELETE("/votes/:id", placeholderJSON)
-			v1.GET("/votes/:id/results", placeholderJSON)
 		}
 
 		// T7: Material management
@@ -308,10 +285,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.GET("/materials/:id", materialHandler.GetByID)
 			v1.DELETE("/materials/:id", materialHandler.Delete)
 		} else {
-			v1.GET("/materials", placeholderJSON)
-			v1.POST("/materials/upload", placeholderJSON)
-			v1.GET("/materials/:id", placeholderJSON)
-			v1.DELETE("/materials/:id", placeholderJSON)
 		}
 
 		// T10: Template system
@@ -323,8 +296,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.GET("/templates", templateHandler.ListSystemTemplates)
 			v1.POST("/templates", templateHandler.SaveTemplate)
 		} else {
-			v1.GET("/templates", placeholderJSON)
-			v1.POST("/templates", placeholderJSON)
 		}
 
 		// T11: AI integration
@@ -337,9 +308,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.POST("/ai/layout", aiHandler.Layout)
 			v1.POST("/ai/proofread", aiHandler.Proofread)
 		} else {
-			v1.POST("/ai/write", placeholderJSON)
-			v1.POST("/ai/layout", placeholderJSON)
-			v1.POST("/ai/proofread", placeholderJSON)
 		}
 
 		// T13: Quick news
@@ -356,12 +324,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/news/:id", newsHandler.DeleteNews)
 			v1.GET("/quicknews/users", newsHandler.ListUsers)
 		} else {
-			v1.GET("/news", placeholderJSON)
-			v1.POST("/news", placeholderJSON)
-			v1.GET("/news/:id", placeholderJSON)
-			v1.PUT("/news/:id", placeholderJSON)
-			v1.DELETE("/news/:id", placeholderJSON)
-			v1.GET("/quicknews/users", placeholderJSON)
 		}
 
 		// 服务器信息
@@ -370,8 +332,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 		admin := v1.Group("/admin")
 		admin.Use(middleware.RequireRole("admin"))
 		{
-			admin.GET("/users", adminHandler.ListUsers)
-			admin.PUT("/users/:id", adminHandler.UpdateUser)
 		}
 	}
 
