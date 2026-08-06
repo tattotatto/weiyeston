@@ -78,8 +78,8 @@ export const router = createBrowserRouter([
       { path: 'votes', element: <VoteList /> },
       { path: 'votes/create', element: <VoteCreate /> },
       // Super admin
-      { path: 'admin/users', element: <UserList /> },
-      { path: '*', element: <Navigate to="/dashboard" replace /> },
+      { path: 'users', element: <UserList /> },
+      { path: '*', element: <Navigate to="/admin/dashboard" replace /> },
     ],
   },
 ]);
