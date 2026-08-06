@@ -40,13 +40,17 @@ function AdminLayout() {
   const isAccountRoute = accountId !== null && pathParts.length > 2;
 
   const selectedKey = useMemo(() => {
-    // For account-scoped routes, highlight based on the sub-route
-    if (isAccountRoute && accountId) {
-      const subPath = '/' + pathParts.slice(2).join('/');
-      return `/accounts/${accountId}${subPath}`;
+    const parts = location.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'accounts' && parts[1] && parts.length >= 3) {
+      // Account-scoped: highlight the full sub-path
+      return '/' + parts.join('/');
     }
-    return '/' + location.pathname.split('/').filter(Boolean)[0] || '/dashboard';
-  }, [location.pathname, isAccountRoute, accountId, pathParts]);
+    // For 2-level paths like /admin/users, keep the full path
+    if (parts.length >= 2) {
+      return '/' + parts.join('/');
+    }
+    return '/' + (parts[0] || 'dashboard');
+  }, [location.pathname]);
 
   const menuItems: MenuItem[] = useMemo(() => {
     if (isAdmin) {
@@ -79,9 +83,7 @@ function AdminLayout() {
     ];
 
     if (isAccountRoute && accountId) {
-      items.push({
-        type: 'divider',
-      } as MenuItem);
+      items.push({ type: 'divider' } as unknown as MenuItem);
       items.push({
         key: `/accounts/${accountId}/dashboard`,
         icon: <AppstoreOutlined />,
