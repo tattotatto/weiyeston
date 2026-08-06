@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -198,6 +199,23 @@ func safeString(s *string) string {
 	return *s
 }
 
+// getPublicIPHint 获取服务器公网 IP 用于微信公众号 IP 白名单配置提示
+// 使用 2 秒超时的 HTTP 请求，避免阻塞
+func getPublicIPHint() string {
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("https://api.ipify.org")
+	if err != nil {
+		return "请将服务器公网IP加入微信公众号IP白名单"
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
+	ip := strings.TrimSpace(string(body))
+	if ip == "" {
+		return "请将服务器公网IP加入微信公众号IP白名单"
+	}
+	return "请将以下IP加入微信公众号IP白名单: " + ip
+}
+
 // ========== CRUD Handlers ==========
 
 // Create POST /api/v1/accounts — 手动创建公众号
@@ -308,11 +326,14 @@ func (h *AccountHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// 7. 返回创建结果（脱敏）
+	// 7. 返回创建结果（脱敏），包含 IP 白名单提示
 	c.JSON(http.StatusCreated, gin.H{
 		"code": 0,
 		"msg":  "ok",
-		"data": toAccountVO(account),
+		"data": gin.H{
+			"account":      toAccountVO(account),
+			"ip_whitelist": getPublicIPHint(),
+		},
 	})
 }
 

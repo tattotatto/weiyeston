@@ -16,6 +16,8 @@ type Tenant struct {
 	AvatarURL    *string    `db:"avatar_url"`
 	Role         string     `db:"role"`         // admin | user
 	Status       int16      `db:"status"`
+	VipEndTime   *time.Time `db:"vip_end_time"`
+	VipLevel     string     `db:"vip_level"`
 	LastLoginAt  *time.Time `db:"last_login_at"`
 	DeletedAt    *time.Time `db:"deleted_at"`
 	CreatedAt    time.Time  `db:"created_at"`

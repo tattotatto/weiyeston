@@ -78,3 +78,27 @@ export async function logout(): Promise<LogoutResponse> {
   const { data } = await client.post<LogoutResponse>('/auth/logout');
   return data;
 }
+
+// 注册
+export interface RegisterParams {
+  username: string;
+  password: string;
+  email: string;
+  nickname?: string;
+}
+
+export interface RegisterData {
+  id: number;
+  username: string;
+}
+
+export interface RegisterResponse {
+  code: number;
+  msg: string;
+  data: RegisterData;
+}
+
+export async function register(params: RegisterParams): Promise<RegisterResponse> {
+  const { data } = await client.post<RegisterResponse>('/auth/register', params);
+  return data;
+}

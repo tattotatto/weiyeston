@@ -1,0 +1,3 @@
+ALTER TABLE tenants DROP COLUMN IF EXISTS vip_level;
+ALTER TABLE tenants DROP COLUMN IF EXISTS vip_end_time;
+ALTER TABLE tenants DROP COLUMN IF EXISTS status;

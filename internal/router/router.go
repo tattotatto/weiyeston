@@ -1,4 +1,4 @@
-// Package router 路由注册集中管理
+// Package router central route registration
 package router
 
 import (
@@ -17,14 +17,12 @@ import (
 	"github.com/weiyeston/weiyeston-v2/internal/repository/reply"
 	"github.com/weiyeston/weiyeston-v2/internal/service/wechat"
 
-
 	"github.com/weiyeston/weiyeston-v2/internal/cache"
 
 	aiservice "github.com/weiyeston/weiyeston-v2/internal/service/ai"
 )
 
-// Dependencies 依赖注入容器
-// 集中管理路由所需要的所有外部依赖
+// Dependencies dependency injection container
 type Dependencies struct {
 	Config        *config.Config
 	DB            *sqlx.DB
@@ -34,37 +32,37 @@ type Dependencies struct {
 	AIService     *aiservice.AIService
 }
 
-// Setup 注册所有路由和中间件，返回配置好的 gin.Engine
-// 注册顺序：Recovery → Logger → CORS（全局中间件）
-// 然后是健康检查、微信回调、H5 页面（无需认证）
-// 最后是管理后台 API 组（需要 JWT 认证）
+// Setup registers all routes and middleware, returns configured gin.Engine
+// Order: Recovery -> Logger -> CORS (global middleware)
+// Then health check, WeChat callback, H5 pages (no auth)
+// Finally admin API group (requires JWT auth)
 func Setup(deps *Dependencies) *gin.Engine {
-	// 设置 Gin 模式
+	// Set Gin mode
 	gin.SetMode(deps.Config.Server.Mode)
 
 	r := gin.New()
 
-	// ============ 全局中间件（按顺序） ============
+	// ============ Global middleware (in order) ============
 	r.Use(middleware.Recovery(deps.Logger))
 	r.Use(middleware.Logger(deps.Logger))
 	r.Use(middleware.CORS(deps.Config.CORS))
 
-	// ============ 健康检查 ============
+	// ============ Health check ============
 	healthHandler := api.NewHealthHandler(deps.DB, deps.Redis)
 	r.GET("/api/v1/health", healthHandler.Check)
 	r.GET("/api/health", healthHandler.Check)
 
-	// ============ 根路径 → 管理后台 ============
+	// ============ Root path -> admin SPA ============
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/admin") })
 
-	// ============ 测试接口注册（开发/测试环境） ============
+	// ============ Test routes (dev/test environment) ============
 	if deps.Config.Server.Mode != "release" {
 		testGroup := r.Group("/api/v1/__tests__")
 		registerTestRoutes(testGroup, deps)
 	}
 
-	// ============ 微信回调（无需认证，由微信签名验证保护） ============
-	// T3: 微信第三方平台回调端点
+	// ============ WeChat callback (no auth, protected by WeChat signature) ============
+	// T3: WeChat third-party platform callback endpoint
 	var componentHandler *wx.ComponentHandler
 	if deps.WechatService != nil {
 		componentHandler = wx.NewComponentHandler(deps.WechatService, deps.Logger)
@@ -82,7 +80,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 		c.String(http.StatusOK, "wx callback message placeholder")
 	})
 
-	// ============ H5 展示页（无需认证） ============
+	// ============ H5 display pages (no auth) ============
 	// Build H5 handlers (need VoteRepo for vote submit)
 	var voteH5Handler *api.VoteHandler
 	if deps.DB != nil {
@@ -107,60 +105,102 @@ func Setup(deps *Dependencies) *gin.Engine {
 		})
 	}
 
-	// ============ 认证路由（登录/刷新独立于 Auth 中间件组） ============
+	// ============ Auth routes (login/register/refresh independent of Auth middleware group) ============
 	authHandler := api.NewAuthHandler(deps.DB, deps.Redis, deps.Config.JWT)
 	r.POST("/api/v1/auth/login", authHandler.Login)
+	r.POST("/api/v1/auth/register", authHandler.Register)
 
-	// /auth/refresh 独立注册 — 不能放在 Auth 中间件组内（需接收过期 token）
+	// Admin and server info handlers
+	adminHandler := api.NewAdminHandler(deps.DB)
+	serverHandler := api.NewServerHandler()
+
+	// /auth/refresh registered independently - cannot be in Auth middleware group (needs to accept expired tokens)
 	r.POST("/api/v1/auth/refresh", authHandler.Refresh)
 
-	// ============ 管理后台 API（JWT 认证） ============
+	// ============ Admin API (JWT auth) ============
 	v1 := r.Group("/api/v1")
 	v1.Use(middleware.Auth(deps.Config.JWT))
 	v1.Use(middleware.Tenant())
 	{
-		// 认证相关（需要 JWT）
+		// Auth related (needs JWT)
 		v1.GET("/auth/me", authHandler.Me)
 		v1.POST("/auth/logout", authHandler.Logout)
 
-		// 公众号管理
+		// Server info (needs auth, any role)
+		v1.GET("/server/info", serverHandler.GetInfo)
+
+		// Admin routes (requires admin role)
+		adminGroup := v1.Group("/admin")
+		adminGroup.Use(middleware.RequireRole("admin"))
+		{
+			adminGroup.GET("/users", adminHandler.ListUsers)
+			adminGroup.PUT("/users/:id", adminHandler.UpdateUser)
+		}
+
+		// WeChat account management
+		var accountRepo *account.Repo
 		var accountHandler *api.AccountHandler
 		if deps.WechatService != nil {
 			cacheClient := cache.New(deps.Redis)
-			accountRepo := &account.Repo{DB: deps.DB}
+			accountRepo = &account.Repo{DB: deps.DB}
 			accountHandler = api.NewAccountHandler(accountRepo, deps.WechatService, cacheClient, deps.Logger)
 		}
 
 		if accountHandler != nil {
-			// T3 已有
+			// T3 existing
 			v1.POST("/accounts/auth-url", accountHandler.GenerateAuthURL)
-			// T4 完整实现
+			// T4 full implementation
 			v1.GET("/accounts", accountHandler.List)
 			v1.POST("/accounts", accountHandler.Create)
-			v1.GET("/accounts/:id", accountHandler.GetByID)
-			v1.PUT("/accounts/:id", accountHandler.Update)
-			v1.DELETE("/accounts/:id", accountHandler.Delete)
-			// T3 已有 — 注意静态路由在参数路由之前
-			v1.GET("/accounts/:id/auth-status", accountHandler.GetAuthStatus)
+
+			// Account detail/edit/delete + replies/menu - needs ownership check
+			accountOwnership := func() gin.HandlerFunc {
+				if accountRepo != nil {
+					return middleware.CheckAccountOwnership(accountRepo)
+				}
+				return func(c *gin.Context) { c.Next() }
+			}()
+
+			accountGroup := v1.Group("/accounts")
+			accountGroup.Use(accountOwnership)
+			{
+				accountGroup.GET("/:id", accountHandler.GetByID)
+				accountGroup.PUT("/:id", accountHandler.Update)
+				accountGroup.DELETE("/:id", accountHandler.Delete)
+				// T3 existing - static routes before parameter routes
+				accountGroup.GET("/:id/auth-status", accountHandler.GetAuthStatus)
+			}
 		} else {
 			v1.POST("/accounts/auth-url", placeholderJSON)
-			v1.GET("/accounts/:id/auth-status", placeholderJSON)
 			v1.GET("/accounts", placeholderJSON)
 			v1.POST("/accounts", placeholderJSON)
 			v1.GET("/accounts/:id", placeholderJSON)
 			v1.PUT("/accounts/:id", placeholderJSON)
 			v1.DELETE("/accounts/:id", placeholderJSON)
+			v1.GET("/accounts/:id/auth-status", placeholderJSON)
 		}
 
-		// T5: 自动回复规则
+		// T5: Auto-reply rules
 		var replyHandler *api.ReplyHandler
 		if deps.DB != nil {
 			replyRepo := &reply.Repo{DB: deps.DB}
 			replyHandler = api.NewReplyHandler(replyRepo, deps.Logger)
 		}
 		if replyHandler != nil {
-			v1.GET("/accounts/:id/replies", replyHandler.List)
-			v1.POST("/accounts/:id/replies", replyHandler.Create)
+			// Reply routes need account ownership check
+			replyOwnership := func() gin.HandlerFunc {
+				if accountRepo != nil {
+					return middleware.CheckAccountOwnership(accountRepo)
+				}
+				return func(c *gin.Context) { c.Next() }
+			}()
+
+			replyGroup := v1.Group("/accounts")
+			replyGroup.Use(replyOwnership)
+			{
+				replyGroup.GET("/:id/replies", replyHandler.List)
+				replyGroup.POST("/:id/replies", replyHandler.Create)
+			}
 			v1.PUT("/replies/:id", replyHandler.Update)
 			v1.DELETE("/replies/:id", replyHandler.Delete)
 		} else {
@@ -170,17 +210,29 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/replies/:id", placeholderJSON)
 		}
 
-		// T6: 微信自定义菜单
+		// T6: WeChat custom menu
 		var menuHandler *api.MenuHandler
 		if deps.DB != nil {
 			menuRepo := api.NewMenuRepo(deps.DB)
 			menuHandler = api.NewMenuHandler(menuRepo, deps.Logger)
 		}
 		if menuHandler != nil {
-			v1.GET("/accounts/:id/menu", menuHandler.GetMenu)
-			v1.POST("/accounts/:id/menu", menuHandler.SaveDraft)
-			v1.PUT("/accounts/:id/menu/publish", menuHandler.Publish)
-			v1.DELETE("/accounts/:id/menu", menuHandler.DeleteDraft)
+			// Menu routes need account ownership check
+			menuOwnership := func() gin.HandlerFunc {
+				if accountRepo != nil {
+					return middleware.CheckAccountOwnership(accountRepo)
+				}
+				return func(c *gin.Context) { c.Next() }
+			}()
+
+			menuGroup := v1.Group("/accounts")
+			menuGroup.Use(menuOwnership)
+			{
+				menuGroup.GET("/:id/menu", menuHandler.GetMenu)
+				menuGroup.POST("/:id/menu", menuHandler.SaveDraft)
+				menuGroup.PUT("/:id/menu/publish", menuHandler.Publish)
+				menuGroup.DELETE("/:id/menu", menuHandler.DeleteDraft)
+			}
 		} else {
 			v1.GET("/accounts/:id/menu", placeholderJSON)
 			v1.POST("/accounts/:id/menu", placeholderJSON)
@@ -188,7 +240,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/accounts/:id/menu", placeholderJSON)
 		}
 
-		// T12: 微官网 CMS
+		// T12: Micro-website CMS
 		var cmsHandler *api.CMSHandler
 		if deps.DB != nil {
 			cmsRepo := &api.CMSRepoDB{DB: deps.DB}
@@ -218,7 +270,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.GET("/cms/articles/:id/preview", placeholderJSON)
 		}
 
-		// T14: 投票
+		// T14: Voting
 		var voteHandler *api.VoteHandler
 		if deps.DB != nil {
 			voteRepo := api.NewVoteRepo(deps.DB)
@@ -240,7 +292,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.GET("/votes/:id/results", placeholderJSON)
 		}
 
-		// T7: 素材管理
+		// T7: Material management
 		var materialHandler *api.MaterialHandler
 		if deps.DB != nil {
 			materialRepo := api.NewMaterialRepo(deps.DB)
@@ -262,7 +314,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/materials/:id", placeholderJSON)
 		}
 
-		// T10: 模板系统
+		// T10: Template system
 		var templateHandler *api.TemplateHandler
 		if deps.DB != nil {
 			templateHandler = api.NewTemplateHandler(deps.DB)
@@ -275,7 +327,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.POST("/templates", placeholderJSON)
 		}
 
-		// T11: AI 集成
+		// T11: AI integration
 		var aiHandler *api.AIHandler
 		if deps.AIService != nil {
 			aiHandler = api.NewAIHandler(deps.AIService)
@@ -290,7 +342,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.POST("/ai/proofread", placeholderJSON)
 		}
 
-		// T13: 快讯
+		// T13: Quick news
 		var newsHandler *api.NewsHandler
 		if deps.DB != nil {
 			newsRepo := api.NewNewsRepo(deps.DB)
@@ -311,8 +363,18 @@ func Setup(deps *Dependencies) *gin.Engine {
 			v1.DELETE("/news/:id", placeholderJSON)
 			v1.GET("/quicknews/users", placeholderJSON)
 		}
-	}
 
+		// 服务器信息
+		v1.GET("/server/info", serverHandler.GetInfo)
+
+		// 管理员路由（需要 admin 角色）
+		admin := v1.Group("/admin")
+		admin.Use(middleware.RequireRole("admin"))
+		{
+			admin.GET("/users", adminHandler.ListUsers)
+			admin.PUT("/users/:id", adminHandler.UpdateUser)
+		}
+	}
 
 	// ============ 管理后台 SPA ============
 	r.GET("/admin", func(c *gin.Context) { c.File("./web/admin/index.html") })
@@ -325,12 +387,12 @@ func Setup(deps *Dependencies) *gin.Engine {
 		}
 		http.NotFound(c.Writer, c.Request)
 	})
-	// ============ 上传文件 ============
+	// ============ Upload files ============
 	r.Static("/uploads", "./uploads")
 	return r
 }
 
-// placeholderJSON 占位 JSON 处理函数（T0 阶段用于未实现的 handler）
+// placeholderJSON placeholder JSON handler for unimplemented handlers (T0 phase)
 func placeholderJSON(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
@@ -339,9 +401,9 @@ func placeholderJSON(c *gin.Context) {
 	})
 }
 
-// registerTestRoutes 仅在非 release 模式下注册测试接口
+// registerTestRoutes registers test routes only in non-release mode
 func registerTestRoutes(r *gin.RouterGroup, deps *Dependencies) {
-	// 数据库连接状态
+	// Database connection status
 	r.GET("/db/status", func(c *gin.Context) {
 		errStr := ""
 		dbAlive := true
@@ -357,9 +419,9 @@ func registerTestRoutes(r *gin.RouterGroup, deps *Dependencies) {
 		})
 	})
 
-	// 配置脱敏端点
+	// Config desensitization endpoint
 	r.GET("/config", func(c *gin.Context) {
-		// 返回脱敏后的配置
+		// Return desensitized config
 		safe := *deps.Config
 		safe.Database.Password = "***"
 		safe.Redis.Password = "***"
@@ -372,7 +434,7 @@ func registerTestRoutes(r *gin.RouterGroup, deps *Dependencies) {
 		c.JSON(http.StatusOK, safe)
 	})
 
-	// 测试数据加载/清理占位
+	// Test data load/clear placeholder
 	r.POST("/fixtures/load", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"msg": "fixtures load placeholder"})
 	})

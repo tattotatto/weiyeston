@@ -95,6 +95,8 @@ func TestCreate(t *testing.T) {
 						sqlmock.AnyArg(), // phone (nullable)
 						sqlmock.AnyArg(), // avatar_url (nullable)
 						tt.tenant.Status,
+					sqlmock.AnyArg(), // role
+					sqlmock.AnyArg(), // vip_level
 					).
 					WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
 						AddRow(1, time.Now(), time.Now()))
@@ -215,7 +217,7 @@ func TestUpdate(t *testing.T) {
 					WillReturnResult(sqlmock.NewResult(0, 0))
 			} else {
 				mock.ExpectExec(`UPDATE tenants SET`).
-					WithArgs(tt.tenant.Nickname, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), tt.tenant.Status, tt.tenant.ID).
+					WithArgs(tt.tenant.Nickname, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), tt.tenant.Status, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), tt.tenant.ID).
 					WillReturnResult(sqlmock.NewResult(0, 1))
 			}
 
@@ -267,30 +269,43 @@ func TestSoftDelete(t *testing.T) {
 func TestList(t *testing.T) {
 	tests := []struct {
 		name      string
+		keyword   string
+		status    *int16
 		offset    int
 		limit     int
 		wantCount int
+		wantTotal int64
 		wantErr   bool
 	}{
 		{
 			name:      "查询第一页",
+			keyword:   "",
+			status:    nil,
 			offset:    0,
 			limit:     10,
 			wantCount: 3,
+			wantTotal: 3,
 			wantErr:   false,
 		},
 		{
 			name:      "查询空页",
+			keyword:   "",
+			status:    nil,
 			offset:    100,
 			limit:     10,
 			wantCount: 0,
+			wantTotal: 0,
 			wantErr:   false,
 		},
 		{
-			name:    "无效 limit",
-			offset:  0,
-			limit:   -1,
-			wantErr: true,
+			name:      "无效 limit",
+			keyword:   "",
+			status:    nil,
+			offset:    0,
+			limit:     -1,
+			wantCount: 0,
+			wantTotal: 0,
+			wantErr:   false,
 		},
 	}
 
@@ -299,26 +314,39 @@ func TestList(t *testing.T) {
 			repo, mock := newMockRepo(t)
 			defer repo.DB.Close()
 
-			if tt.wantErr {
-				// 无效参数不查询数据库
-			} else {
-				columns := []string{"id", "username", "password_hash", "nickname", "email",
-					"phone", "avatar_url", "status", "last_login_at", "deleted_at", "created_at", "updated_at"}
-				rows := sqlmock.NewRows(columns)
-				for i := 0; i < tt.wantCount; i++ {
-					rows.AddRow(int64(i+1), "user"+string(rune('a'+i)), "hash", nil, nil,
-						nil, nil, 1, nil, nil, time.Now(), time.Now())
-				}
-				mock.ExpectQuery(`SELECT \* FROM tenants WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT \$1 OFFSET \$2`).
-					WithArgs(tt.limit, tt.offset).
-					WillReturnRows(rows)
+			limit := tt.limit
+			if limit <= 0 {
+				limit = 20
+			}
+			offset := tt.offset
+			if offset < 0 {
+				offset = 0
 			}
 
-			tenants, err := repo.List(context.Background(), tt.offset, tt.limit)
+			// Mock count query
+			countRows := sqlmock.NewRows([]string{"count"})
+			countRows.AddRow(tt.wantTotal)
+			mock.ExpectQuery(`SELECT COUNT\(\*\) FROM tenants WHERE deleted_at IS NULL`).
+				WillReturnRows(countRows)
+
+			columns := []string{"id", "username", "password_hash", "nickname", "email",
+				"phone", "avatar_url", "status", "role", "vip_level", "vip_end_time",
+				"last_login_at", "deleted_at", "created_at", "updated_at"}
+			rows := sqlmock.NewRows(columns)
+			for i := 0; i < tt.wantCount; i++ {
+				rows.AddRow(int64(i+1), "user"+string(rune('a'+i)), "hash", nil, nil,
+					nil, nil, int16(1), "user", "trial", nil, nil, nil, time.Now(), time.Now())
+			}
+			mock.ExpectQuery(`SELECT \* FROM tenants WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT \$1 OFFSET \$2`).
+				WithArgs(limit, offset).
+				WillReturnRows(rows)
+
+			tenants, total, err := repo.List(context.Background(), tt.keyword, tt.status, tt.limit, tt.offset)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.wantTotal, total)
 				assert.Len(t, tenants, tt.wantCount)
 			}
 		})

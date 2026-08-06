@@ -19,10 +19,10 @@ type Repo struct {
 
 // Create 创建租户，返回填充了 ID 的 tenant
 func (r *Repo) Create(ctx context.Context, t *model.Tenant) error {
-	query := `INSERT INTO tenants (username, password_hash, nickname, email, phone, avatar_url, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at, updated_at`
+	query := `INSERT INTO tenants (username, password_hash, nickname, email, phone, avatar_url, status, role, vip_level)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at, updated_at`
 	row := r.DB.QueryRowContext(ctx, query,
-		t.Username, t.PasswordHash, t.Nickname, t.Email, t.Phone, t.AvatarURL, t.Status,
+		t.Username, t.PasswordHash, t.Nickname, t.Email, t.Phone, t.AvatarURL, t.Status, t.Role, t.VipLevel,
 	)
 	return row.Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
 }
@@ -61,12 +61,14 @@ func (r *Repo) GetByUsername(ctx context.Context, username string) (*model.Tenan
 	return &t, nil
 }
 
-// Update 更新租户信息（仅更新非零值字段）
+// Update 更新租户信息
 func (r *Repo) Update(ctx context.Context, t *model.Tenant) error {
-	query := `UPDATE tenants SET nickname = $1, email = $2, phone = $3, avatar_url = $4, status = $5, updated_at = NOW()
-		WHERE id = $6 AND deleted_at IS NULL`
+	query := `UPDATE tenants SET nickname = $1, email = $2, phone = $3, avatar_url = $4, status = $5,
+		vip_level = $6, vip_end_time = $7, role = $8, updated_at = NOW()
+		WHERE id = $9 AND deleted_at IS NULL`
 	result, err := r.DB.ExecContext(ctx, query,
-		t.Nickname, t.Email, t.Phone, t.AvatarURL, t.Status, t.ID,
+		t.Nickname, t.Email, t.Phone, t.AvatarURL, t.Status,
+		t.VipLevel, t.VipEndTime, t.Role, t.ID,
 	)
 	if err != nil {
 		return err
@@ -88,19 +90,51 @@ func (r *Repo) SoftDelete(ctx context.Context, id int64) error {
 	return err
 }
 
-// List 分页查询租户列表（按创建时间倒序，排除软删除记录）
-func (r *Repo) List(ctx context.Context, offset, limit int) ([]model.Tenant, error) {
+// List 分页查询租户列表（支持关键词搜索和状态筛选，按创建时间倒序，排除软删除记录）
+func (r *Repo) List(ctx context.Context, keyword string, status *int16, limit, offset int) ([]model.Tenant, int64, error) {
 	if limit <= 0 {
-		return nil, fmt.Errorf("无效的分页参数: limit=%d", limit)
+		limit = 20
 	}
 	if offset < 0 {
 		offset = 0
 	}
-	var tenants []model.Tenant
-	query := `SELECT * FROM tenants WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2`
-	err := r.DB.SelectContext(ctx, &tenants, query, limit, offset)
-	if err != nil {
-		return nil, err
+
+	var total int64
+	var users []model.Tenant
+
+	// Build query
+	where := "WHERE deleted_at IS NULL"
+	args := []interface{}{}
+	argIdx := 1
+
+	if keyword != "" {
+		where += fmt.Sprintf(" AND (username ILIKE $%d OR nickname ILIKE $%d)", argIdx, argIdx)
+		args = append(args, "%"+keyword+"%")
+		argIdx++
 	}
-	return tenants, nil
+	if status != nil {
+		where += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, *status)
+		argIdx++
+	}
+
+	// Count total
+	countQuery := "SELECT COUNT(*) FROM tenants " + where
+	if err := r.DB.GetContext(ctx, &total, countQuery, args...); err != nil {
+		return nil, 0, err
+	}
+
+	// Fetch list
+	query := fmt.Sprintf("SELECT * FROM tenants %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d", where, argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	if err := r.DB.SelectContext(ctx, &users, query, args...); err != nil {
+		return nil, 0, err
+	}
+
+	if users == nil {
+		users = make([]model.Tenant, 0)
+	}
+
+	return users, total, nil
 }

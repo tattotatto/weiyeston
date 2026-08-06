@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, message, Space } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { createAccount, type CreateAccountParams } from '@/api/account';
+import { getServerInfo } from '@/api/server';
 
 function AccountCreate() {
   const navigate = useNavigate();
@@ -14,6 +15,21 @@ function AccountCreate() {
     try {
       await createAccount(values);
       message.success('接入成功');
+
+      // 获取服务器公网 IP 并提示配置白名单
+      try {
+        const serverRes = await getServerInfo();
+        const publicIp = serverRes.data.data?.public_ip;
+        if (publicIp) {
+          message.info(
+            `请将以下IP加入微信公众号IP白名单: ${publicIp}`,
+            8,
+          );
+        }
+      } catch {
+        // IP 获取失败不影响主流程
+      }
+
       navigate('/accounts', { replace: true });
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { msg?: string } } };

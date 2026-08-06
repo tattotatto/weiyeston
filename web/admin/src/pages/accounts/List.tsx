@@ -212,6 +212,10 @@ function AccountList() {
         rowKey="id"
         loading={loading}
         onChange={handleTableChange}
+        onRow={(record) => ({
+          style: { cursor: 'pointer' },
+          onClick: () => navigate(`/accounts/${record.id}/dashboard`),
+        })}
         pagination={{
           current: page,
           pageSize,
