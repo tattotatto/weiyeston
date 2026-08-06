@@ -6,6 +6,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ChangePassword from '@/pages/ChangePassword';
+import Profile from '@/pages/Profile';
 import Dashboard from '@/pages/Dashboard';
 import AccountList from '@/pages/accounts/List';
 import AccountCreate from '@/pages/accounts/Create';
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'change-password', element: <ChangePassword /> },
+      { path: 'profile', element: <Profile /> },
       { path: 'accounts', element: <AccountList /> },
       { path: 'accounts/create', element: <AccountCreate /> },
       { path: 'accounts/:id', element: <AccountDetail /> },

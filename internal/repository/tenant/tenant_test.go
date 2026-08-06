@@ -97,6 +97,7 @@ func TestCreate(t *testing.T) {
 						tt.tenant.Status,
 					sqlmock.AnyArg(), // role
 					sqlmock.AnyArg(), // vip_level
+					sqlmock.AnyArg(), // company (nullable)
 					).
 					WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
 						AddRow(1, time.Now(), time.Now()))
@@ -127,8 +128,9 @@ func TestGetByID(t *testing.T) {
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{
 					"id", "username", "password_hash", "nickname", "email", "phone",
-					"avatar_url", "status", "last_login_at", "deleted_at", "created_at", "updated_at",
-				}).AddRow(1, "testuser", "$2a$10$hash", "测试", nil, nil, nil, 1, nil, nil, time.Now(), time.Now())
+					"company", "avatar_url", "role", "status", "vip_level", "vip_end_time",
+					"last_login_at", "deleted_at", "created_at", "updated_at",
+				}).AddRow(1, "testuser", "$2a$10$hash", "测试", nil, nil, nil, nil, "user", 1, "trial", nil, nil, nil, time.Now(), time.Now())
 				mock.ExpectQuery(`SELECT \* FROM tenants WHERE id = \$1 AND deleted_at IS NULL`).
 					WithArgs(int64(1)).
 					WillReturnRows(rows)
@@ -142,7 +144,7 @@ func TestGetByID(t *testing.T) {
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(`SELECT \* FROM tenants WHERE id = \$1 AND deleted_at IS NULL`).
 					WithArgs(int64(999)).
-					WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "nickname", "email", "phone", "avatar_url", "status", "last_login_at", "deleted_at", "created_at", "updated_at"}))
+					WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "nickname", "email", "phone", "company", "avatar_url", "role", "status", "vip_level", "vip_end_time", "last_login_at", "deleted_at", "created_at", "updated_at"}))
 			},
 			wantNil: true,
 			wantErr: false,
@@ -222,6 +224,64 @@ func TestUpdate(t *testing.T) {
 			}
 
 			err := repo.Update(context.Background(), &tt.tenant)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestUpdateProfile 测试更新个人资料
+func TestUpdateProfile(t *testing.T) {
+	tests := []struct {
+		name      string
+		id        int64
+		nickname  *string
+		email     *string
+		phone     *string
+		company   *string
+		avatarURL *string
+		wantErr   bool
+	}{
+		{
+			name:     "更新所有字段",
+			id:       1,
+			nickname: strPtr("新昵称"),
+			email:    strPtr("new@test.com"),
+			phone:    strPtr("13900000001"),
+			company:  strPtr("测试公司"),
+			wantErr:  false,
+		},
+		{
+			name: "更新部分字段",
+			id:   1,
+			company: strPtr("新公司名"),
+			wantErr:  false,
+		},
+		{
+			name:    "更新不存在的租户",
+			id:      999,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo, mock := newMockRepo(t)
+			defer repo.DB.Close()
+
+			if tt.wantErr {
+				mock.ExpectExec(`UPDATE tenants SET`).
+					WillReturnResult(sqlmock.NewResult(0, 0))
+			} else {
+				mock.ExpectExec(`UPDATE tenants SET`).
+					WithArgs(tt.nickname, tt.email, tt.phone, tt.company, tt.avatarURL, tt.id).
+					WillReturnResult(sqlmock.NewResult(0, 1))
+			}
+
+			err := repo.UpdateProfile(context.Background(), tt.id, tt.nickname, tt.email, tt.phone, tt.company, tt.avatarURL)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -330,12 +390,12 @@ func TestList(t *testing.T) {
 				WillReturnRows(countRows)
 
 			columns := []string{"id", "username", "password_hash", "nickname", "email",
-				"phone", "avatar_url", "status", "role", "vip_level", "vip_end_time",
+				"phone", "company", "avatar_url", "status", "role", "vip_level", "vip_end_time",
 				"last_login_at", "deleted_at", "created_at", "updated_at"}
 			rows := sqlmock.NewRows(columns)
 			for i := 0; i < tt.wantCount; i++ {
 				rows.AddRow(int64(i+1), "user"+string(rune('a'+i)), "hash", nil, nil,
-					nil, nil, int16(1), "user", "trial", nil, nil, nil, time.Now(), time.Now())
+					nil, nil, nil, int16(1), "user", "trial", nil, nil, nil, time.Now(), time.Now())
 			}
 			mock.ExpectQuery(`SELECT \* FROM tenants WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT \$1 OFFSET \$2`).
 				WithArgs(limit, offset).

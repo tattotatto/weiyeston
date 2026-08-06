@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Typography, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined, PhoneOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined, PhoneOutlined, BankOutlined } from '@ant-design/icons';
 import { register } from '@/api/auth';
 
 const { Text } = Typography;
@@ -12,7 +12,7 @@ function Register() {
   const [form] = Form.useForm();
 
   const handleSubmit = async (values: {
-    username: string; password: string; email: string; phone: string; nickname?: string;
+    username: string; password: string; email: string; phone: string; nickname?: string; company?: string;
   }) => {
     setLoading(true);
     try {
@@ -22,6 +22,7 @@ function Register() {
         email: values.email,
         phone: values.phone,
         nickname: values.nickname || undefined,
+        company: values.company || undefined,
       });
       message.success('注册成功，请等待管理员审核后登录');
       navigate('/login', { replace: true });
@@ -82,6 +83,10 @@ function Register() {
 
         <Form.Item name="nickname" rules={[{ max: 50, message: '昵称不能超过 50 个字符' }]}>
           <Input prefix={<SmileOutlined style={{ color: '#bfbfbf' }} />} placeholder="昵称（可选）" />
+        </Form.Item>
+
+        <Form.Item name="company" rules={[{ max: 200, message: '公司名称不能超过 200 个字符' }]}>
+          <Input prefix={<BankOutlined style={{ color: '#bfbfbf' }} />} placeholder="公司名称（可选）" />
         </Form.Item>
 
         <Form.Item style={{ marginBottom: 0 }}>

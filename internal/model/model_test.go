@@ -18,6 +18,7 @@ func TestTenantDBTags(t *testing.T) {
 		"Nickname":     "nickname",
 		"Email":        "email",
 		"Phone":        "phone",
+		"Company":      "company",
 		"AvatarURL":    "avatar_url",
 		"Role":         "role",
 		"Status":       "status",
@@ -333,7 +334,7 @@ func TestModelFieldCount(t *testing.T) {
 		obj        interface{}
 		fieldCount int
 	}{
-		{"Tenant", Tenant{}, 15},
+		{"Tenant", Tenant{}, 16},
 		{"WechatAccount", WechatAccount{}, 29},
 		{"Channel", Channel{}, 13},
 		{"Article", Article{}, 18},

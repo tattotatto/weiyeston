@@ -86,6 +86,7 @@ export interface RegisterParams {
   email: string;
   phone: string;
   nickname?: string;
+  company?: string;
 }
 
 export interface RegisterData {
@@ -101,6 +102,49 @@ export interface RegisterResponse {
 
 export async function register(params: RegisterParams): Promise<RegisterResponse> {
   const { data } = await client.post<RegisterResponse>('/auth/register', params);
+  return data;
+}
+
+// 获取个人资料
+export interface ProfileData {
+  id: number;
+  username: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  avatar_url?: string;
+  role: string;
+}
+
+export interface ProfileResponse {
+  code: number;
+  msg: string;
+  data: ProfileData;
+}
+
+export async function getProfile(): Promise<ProfileResponse> {
+  const { data } = await client.get<ProfileResponse>('/auth/profile');
+  return data;
+}
+
+// 更新个人资料
+export interface UpdateProfileParams {
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  avatar_url?: string;
+}
+
+export interface UpdateProfileResponse {
+  code: number;
+  msg: string;
+  data: ProfileData;
+}
+
+export async function updateProfile(params: UpdateProfileParams): Promise<UpdateProfileResponse> {
+  const { data } = await client.put<UpdateProfileResponse>('/auth/profile', params);
   return data;
 }
 

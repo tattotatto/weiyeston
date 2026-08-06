@@ -19,10 +19,10 @@ type Repo struct {
 
 // Create 创建租户，返回填充了 ID 的 tenant
 func (r *Repo) Create(ctx context.Context, t *model.Tenant) error {
-	query := `INSERT INTO tenants (username, password_hash, nickname, email, phone, avatar_url, status, role, vip_level)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at, updated_at`
+	query := `INSERT INTO tenants (username, password_hash, nickname, email, phone, avatar_url, status, role, vip_level, company)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, created_at, updated_at`
 	row := r.DB.QueryRowContext(ctx, query,
-		t.Username, t.PasswordHash, t.Nickname, t.Email, t.Phone, t.AvatarURL, t.Status, t.Role, t.VipLevel,
+		t.Username, t.PasswordHash, t.Nickname, t.Email, t.Phone, t.AvatarURL, t.Status, t.Role, t.VipLevel, t.Company,
 	)
 	return row.Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
 }
@@ -111,6 +111,24 @@ func (r *Repo) GetByPhone(ctx context.Context, phone string) (*model.Tenant, err
 func (r *Repo) UpdatePassword(ctx context.Context, id int64, passwordHash string) error {
 	query := `UPDATE tenants SET password_hash = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
 	result, err := r.DB.ExecContext(ctx, query, passwordHash, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("租户不存在或已删除: id=%d", id)
+	}
+	return nil
+}
+
+// UpdateProfile 更新用户个人资料（仅限安全字段：nickname, email, phone, company, avatar_url）
+func (r *Repo) UpdateProfile(ctx context.Context, id int64, nickname, email, phone, company, avatarURL *string) error {
+	query := `UPDATE tenants SET nickname = $1, email = $2, phone = $3, company = $4, avatar_url = $5, updated_at = NOW()
+		WHERE id = $6 AND deleted_at IS NULL`
+	result, err := r.DB.ExecContext(ctx, query, nickname, email, phone, company, avatarURL, id)
 	if err != nil {
 		return err
 	}

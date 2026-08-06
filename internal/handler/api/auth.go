@@ -48,6 +48,7 @@ type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Phone    string `json:"phone" binding:"required"`
 	Nickname string `json:"nickname"`
+	Company  string `json:"company"`
 }
 
 // ChangePasswordRequest 修改密码请求
@@ -75,6 +76,27 @@ type UserDTO struct {
 	Nickname  string `json:"nickname"`
 	Role      string `json:"role"`
 	AvatarURL string `json:"avatar_url,omitempty"`
+}
+
+// ProfileDTO 返回给前端的完整个人资料
+type ProfileDTO struct {
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	Nickname  string `json:"nickname,omitempty"`
+	Email     string `json:"email,omitempty"`
+	Phone     string `json:"phone,omitempty"`
+	Company   string `json:"company,omitempty"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+	Role      string `json:"role"`
+}
+
+// UpdateProfileRequest 更新个人资料请求
+type UpdateProfileRequest struct {
+	Nickname  *string `json:"nickname"`
+	Email     *string `json:"email"`
+	Phone     *string `json:"phone"`
+	Company   *string `json:"company"`
+	AvatarURL *string `json:"avatar_url"`
 }
 
 // LoginResponse 登录响应 data 字段
@@ -344,6 +366,125 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	})
 }
 
+// Profile 获取当前用户完整个人资料
+// GET /api/v1/auth/profile
+func (h *AuthHandler) Profile(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+
+	userID, ok := userIDVal.(int64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+
+	user, err := h.TenantRepo.GetByID(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "服务器内部错误"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+
+	dto := ProfileDTO{
+		ID:       user.ID,
+		Username: user.Username,
+		Role:     user.Role,
+	}
+	if user.Nickname != nil {
+		dto.Nickname = *user.Nickname
+	}
+	if user.Email != nil {
+		dto.Email = *user.Email
+	}
+	if user.Phone != nil {
+		dto.Phone = *user.Phone
+	}
+	if user.Company != nil {
+		dto.Company = *user.Company
+	}
+	if user.AvatarURL != nil {
+		dto.AvatarURL = *user.AvatarURL
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "ok",
+		"data": dto,
+	})
+}
+
+// UpdateProfile 更新当前用户个人资料
+// PUT /api/v1/auth/profile
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "请求参数不合法"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+
+	userID, ok := userIDVal.(int64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+
+	// 校验手机号格式
+	if req.Phone != nil && *req.Phone != "" && !phonePattern.MatchString(*req.Phone) {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "手机号格式不正确"})
+		return
+	}
+
+	if err := h.TenantRepo.UpdateProfile(ctx, userID, req.Nickname, req.Email, req.Phone, req.Company, req.AvatarURL); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "更新个人资料失败"})
+		return
+	}
+
+	// 返回更新后的用户资料
+	user, _ := h.TenantRepo.GetByID(ctx, userID)
+	dto := ProfileDTO{
+		ID:       user.ID,
+		Username: user.Username,
+		Role:     user.Role,
+	}
+	if user.Nickname != nil {
+		dto.Nickname = *user.Nickname
+	}
+	if user.Email != nil {
+		dto.Email = *user.Email
+	}
+	if user.Phone != nil {
+		dto.Phone = *user.Phone
+	}
+	if user.Company != nil {
+		dto.Company = *user.Company
+	}
+	if user.AvatarURL != nil {
+		dto.AvatarURL = *user.AvatarURL
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "个人资料已更新",
+		"data": dto,
+	})
+}
+
 // Logout 登出
 // POST /api/v1/auth/logout
 func (h *AuthHandler) Logout(c *gin.Context) {
@@ -423,6 +564,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 	if req.Nickname != "" {
 		tenant.Nickname = &req.Nickname
+	}
+	if req.Company != "" {
+		tenant.Company = &req.Company
 	}
 
 	// 写入数据库

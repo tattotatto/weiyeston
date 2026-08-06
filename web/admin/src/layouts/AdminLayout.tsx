@@ -127,6 +127,9 @@ function AdminLayout() {
           />
           <div style={{ marginRight: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>{user?.nickname || user?.username || '管理员'}</span>
+            <Button type="link" onClick={() => navigate('/admin/profile')}>
+              个人资料
+            </Button>
             <Button type="link" onClick={() => navigate('/admin/change-password')}>
               修改密码
             </Button>

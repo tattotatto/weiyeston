@@ -13,6 +13,7 @@ type Tenant struct {
 	Nickname     *string    `db:"nickname"`
 	Email        *string    `db:"email"`
 	Phone        *string    `db:"phone"`
+	Company      *string    `db:"company"`
 	AvatarURL    *string    `db:"avatar_url"`
 	Role         string     `db:"role"`         // admin | user
 	Status       int16      `db:"status"`

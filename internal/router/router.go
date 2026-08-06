@@ -130,6 +130,8 @@ func Setup(deps *Dependencies) *gin.Engine {
 	{
 		// -- Auth (needs valid JWT) --
 		v1.GET("/auth/me", authHandler.Me)
+		v1.GET("/auth/profile", authHandler.Profile)
+		v1.PUT("/auth/profile", authHandler.UpdateProfile)
 		v1.POST("/auth/logout", authHandler.Logout)
 		v1.PUT("/auth/password", authHandler.ChangePassword)
 
