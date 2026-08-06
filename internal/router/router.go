@@ -362,7 +362,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 
 	// ============ Group 5: SPA static files ============
 	r.GET("/admin", func(c *gin.Context) { c.File("./web/admin/index.html") })
-	r.GET("/admin/*filepath", func(c *gin.Context) { c.File("./web/admin/" + c.Param("filepath")) })
+	r.Static("/admin/assets", "./web/admin/assets")
 	r.NoRoute(func(c *gin.Context) {
 		p := c.Request.URL.Path
 		// API/微信/H5路径不做SPA回退，返回标准404
