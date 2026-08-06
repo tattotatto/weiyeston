@@ -116,6 +116,10 @@ func Setup(deps *Dependencies) *gin.Engine {
 	// /auth/refresh is independent — must accept expired tokens, so it cannot be inside the Auth group
 	r.POST("/api/v1/auth/refresh", authHandler.Refresh)
 
+	// Forgot password / Reset password (no auth required)
+	r.POST("/api/v1/auth/forgot-password", authHandler.ForgotPassword)
+	r.POST("/api/v1/auth/reset-password", authHandler.ResetPassword)
+
 	// ============ Group 3: API v1 (JWT + Tenant middleware) ============
 	adminHandler := api.NewAdminHandler(deps.DB)
 	serverHandler := api.NewServerHandler()
@@ -127,6 +131,7 @@ func Setup(deps *Dependencies) *gin.Engine {
 		// -- Auth (needs valid JWT) --
 		v1.GET("/auth/me", authHandler.Me)
 		v1.POST("/auth/logout", authHandler.Logout)
+		v1.PUT("/auth/password", authHandler.ChangePassword)
 
 		// -- Server info (any authenticated user) --
 		v1.GET("/server/info", serverHandler.GetInfo)

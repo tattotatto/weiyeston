@@ -125,8 +125,11 @@ function AdminLayout() {
             onClick={() => setCollapsed(!collapsed)}
             style={{ fontSize: 16, width: 64, height: 64 }}
           />
-          <div style={{ marginRight: 24 }}>
+          <div style={{ marginRight: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>{user?.nickname || user?.username || '管理员'}</span>
+            <Button type="link" onClick={() => navigate('/admin/change-password')}>
+              修改密码
+            </Button>
             <Button type="link" onClick={() => {
               removeToken();
               logout();

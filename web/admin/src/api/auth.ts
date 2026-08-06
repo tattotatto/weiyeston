@@ -84,6 +84,7 @@ export interface RegisterParams {
   username: string;
   password: string;
   email: string;
+  phone: string;
   nickname?: string;
 }
 
@@ -100,5 +101,53 @@ export interface RegisterResponse {
 
 export async function register(params: RegisterParams): Promise<RegisterResponse> {
   const { data } = await client.post<RegisterResponse>('/auth/register', params);
+  return data;
+}
+
+// 修改密码
+export interface ChangePasswordParams {
+  old_password: string;
+  new_password: string;
+}
+
+export interface ChangePasswordResponse {
+  code: number;
+  msg: string;
+}
+
+export async function changePassword(params: ChangePasswordParams): Promise<ChangePasswordResponse> {
+  const { data } = await client.put<ChangePasswordResponse>('/auth/password', params);
+  return data;
+}
+
+// 忘记密码（第一步：发送验证码）
+export interface ForgotPasswordParams {
+  phone: string;
+}
+
+export interface ForgotPasswordResponse {
+  code: number;
+  msg: string;
+}
+
+export async function forgotPassword(params: ForgotPasswordParams): Promise<ForgotPasswordResponse> {
+  const { data } = await client.post<ForgotPasswordResponse>('/auth/forgot-password', params);
+  return data;
+}
+
+// 重置密码（第二步：验证码+新密码）
+export interface ResetPasswordParams {
+  phone: string;
+  code: string;
+  new_password: string;
+}
+
+export interface ResetPasswordResponse {
+  code: number;
+  msg: string;
+}
+
+export async function resetPassword(params: ResetPasswordParams): Promise<ResetPasswordResponse> {
+  const { data } = await client.post<ResetPasswordResponse>('/auth/reset-password', params);
   return data;
 }

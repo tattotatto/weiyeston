@@ -90,6 +90,40 @@ func (r *Repo) SoftDelete(ctx context.Context, id int64) error {
 	return err
 }
 
+// GetByPhone 按手机号查询租户（排除软删除记录）
+func (r *Repo) GetByPhone(ctx context.Context, phone string) (*model.Tenant, error) {
+	if phone == "" {
+		return nil, fmt.Errorf("手机号不能为空")
+	}
+	var t model.Tenant
+	query := `SELECT * FROM tenants WHERE phone = $1 AND deleted_at IS NULL`
+	err := r.DB.GetContext(ctx, &t, query, phone)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &t, nil
+}
+
+// UpdatePassword 更新租户密码哈希
+func (r *Repo) UpdatePassword(ctx context.Context, id int64, passwordHash string) error {
+	query := `UPDATE tenants SET password_hash = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
+	result, err := r.DB.ExecContext(ctx, query, passwordHash, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("租户不存在或已删除: id=%d", id)
+	}
+	return nil
+}
+
 // List 分页查询租户列表（支持关键词搜索和状态筛选，按创建时间倒序，排除软删除记录）
 func (r *Repo) List(ctx context.Context, keyword string, status *int16, limit, offset int) ([]model.Tenant, int64, error) {
 	if limit <= 0 {

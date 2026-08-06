@@ -5,6 +5,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -45,7 +46,26 @@ type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=50"`
 	Password string `json:"password" binding:"required,min=8"`
 	Email    string `json:"email" binding:"required,email"`
+	Phone    string `json:"phone" binding:"required"`
 	Nickname string `json:"nickname"`
+}
+
+// ChangePasswordRequest 修改密码请求
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// ForgotPasswordRequest 忘记密码请求（第一步：发送验证码）
+type ForgotPasswordRequest struct {
+	Phone string `json:"phone" binding:"required"`
+}
+
+// ResetPasswordRequest 重置密码请求（第二步：验证码+新密码）
+type ResetPasswordRequest struct {
+	Phone       string `json:"phone" binding:"required"`
+	Code        string `json:"code" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
 // UserDTO 返回给前端的用户信息（脱敏）
@@ -363,6 +383,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
+	// 验证手机号格式
+	if !phonePattern.MatchString(req.Phone) {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "手机号格式不正确"})
+		return
+	}
+
 	// 检查用户名是否已存在
 	existing, err := h.TenantRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
@@ -392,6 +418,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if req.Email != "" {
 		tenant.Email = &req.Email
 	}
+	if req.Phone != "" {
+		tenant.Phone = &req.Phone
+	}
 	if req.Nickname != "" {
 		tenant.Nickname = &req.Nickname
 	}
@@ -418,6 +447,161 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		},
 	})
 }
+
+// ChangePassword 修改密码
+// PUT /api/v1/auth/password (需JWT认证)
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "请求参数不合法"})
+		return
+	}
+
+	// 获取当前用户ID
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+	userID, ok := userIDVal.(int64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权访问"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// 查询用户
+	user, err := h.TenantRepo.GetByID(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "服务器内部错误"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"code": 40401, "msg": "用户不存在"})
+		return
+	}
+
+	// 验证旧密码
+	if err := service.VerifyPassword(user.PasswordHash, req.OldPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40002, "msg": "旧密码不正确"})
+		return
+	}
+
+	// 哈希新密码
+	newPasswordHash, err := service.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "服务器内部错误"})
+		return
+	}
+
+	// 更新密码
+	if err := h.TenantRepo.UpdatePassword(ctx, userID, newPasswordHash); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "密码修改失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "密码修改成功",
+	})
+}
+
+// ForgotPassword 忘记密码 — 第一步：输入手机号
+// POST /api/v1/auth/forgot-password (无需认证)
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "请求参数不合法"})
+		return
+	}
+
+	// 验证手机号格式
+	if !phonePattern.MatchString(req.Phone) {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "手机号格式不正确"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// 查询手机号是否存在
+	user, err := h.TenantRepo.GetByPhone(ctx, req.Phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "服务器内部错误"})
+		return
+	}
+
+	// 无论手机号是否存在，统一返回成功（防手机号枚举）
+	if user == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+			"msg":  "如果该手机号已注册，验证码已发送",
+		})
+		return
+	}
+
+	// 暂不发送短信，提示联系管理员或使用预设验证码
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "验证码已发送，如未收到请联系管理员（预设验证码：888888）",
+	})
+}
+
+// ResetPassword 忘记密码 — 第二步：验证码+重置密码
+// POST /api/v1/auth/reset-password (无需认证)
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "请求参数不合法"})
+		return
+	}
+
+	// 验证手机号格式
+	if !phonePattern.MatchString(req.Phone) {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40001, "msg": "手机号格式不正确"})
+		return
+	}
+
+	// 验证验证码（固定为 888888，后续对接短信后改为动态验证码）
+	if req.Code != "888888" {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 40003, "msg": "验证码错误"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// 查询用户
+	user, err := h.TenantRepo.GetByPhone(ctx, req.Phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "服务器内部错误"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"code": 40401, "msg": "该手机号未注册"})
+		return
+	}
+
+	// 哈希新密码
+	newPasswordHash, err := service.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "服务器内部错误"})
+		return
+	}
+
+	// 更新密码
+	if err := h.TenantRepo.UpdatePassword(ctx, user.ID, newPasswordHash); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "密码重置失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"msg":  "密码重置成功，请使用新密码登录",
+	})
+}
+
+// phonePattern 手机号格式：1开头的11位数字
+var phonePattern = regexp.MustCompile(`^1\d{10}$`)
 
 // LoginRateLimit 登录限流中间件（IP 级别，5次/分钟）
 // 作为独立中间件使用，可在 Login handler 前单独应用

@@ -55,6 +55,7 @@ function Login() {
               <Checkbox style={{ fontSize: 13 }}>记住密码</Checkbox>
             </Form.Item>
             <Link to="/register" style={{ fontSize: 13 }}>还没有账号？立即注册</Link>
+            <Link to="/forgot-password" style={{ fontSize: 13 }}>忘记密码</Link>
           </div>
         </Form.Item>
 

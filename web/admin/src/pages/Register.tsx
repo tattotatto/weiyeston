@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Typography, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined, PhoneOutlined } from '@ant-design/icons';
 import { register } from '@/api/auth';
 
 const { Text } = Typography;
@@ -12,7 +12,7 @@ function Register() {
   const [form] = Form.useForm();
 
   const handleSubmit = async (values: {
-    username: string; password: string; email: string; nickname?: string;
+    username: string; password: string; email: string; phone: string; nickname?: string;
   }) => {
     setLoading(true);
     try {
@@ -20,6 +20,7 @@ function Register() {
         username: values.username,
         password: values.password,
         email: values.email,
+        phone: values.phone,
         nickname: values.nickname || undefined,
       });
       message.success('注册成功，请等待管理员审核后登录');
@@ -44,6 +45,13 @@ function Register() {
       <Form form={form} onFinish={handleSubmit} size="large" autoComplete="off">
         <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
           <Input prefix={<UserOutlined style={{ color: '#bfbfbf' }} />} placeholder="用户名" />
+        </Form.Item>
+
+        <Form.Item name="phone" rules={[
+          { required: true, message: '请输入手机号' },
+          { pattern: /^1\d{10}$/, message: '手机号格式不正确' },
+        ]}>
+          <Input prefix={<PhoneOutlined style={{ color: '#bfbfbf' }} />} placeholder="手机号" />
         </Form.Item>
 
         <Form.Item name="email" rules={[

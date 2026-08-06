@@ -4,6 +4,8 @@ import AuthLayout from '@/layouts/AuthLayout';
 import Landing from '@/pages/Landing';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ChangePassword from '@/pages/ChangePassword';
 import Dashboard from '@/pages/Dashboard';
 import AccountList from '@/pages/accounts/List';
 import AccountCreate from '@/pages/accounts/Create';
@@ -41,6 +43,13 @@ export const router = createBrowserRouter([
       { index: true, element: <Register /> },
     ],
   },
+  {
+    path: '/forgot-password',
+    element: <AuthLayout />,
+    children: [
+      { index: true, element: <ForgotPassword /> },
+    ],
+  },
   // Landing page (public)
   { path: '/', element: <Landing /> },
   // Admin (protected)
@@ -54,6 +63,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
+      { path: 'change-password', element: <ChangePassword /> },
       { path: 'accounts', element: <AccountList /> },
       { path: 'accounts/create', element: <AccountCreate /> },
       { path: 'accounts/:id', element: <AccountDetail /> },
