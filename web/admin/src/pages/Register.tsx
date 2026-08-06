@@ -1,23 +1,19 @@
 import { useState } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
+import { Link, useNavigate } from 'react-router-dom';
+import { Form, Input, Button, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
 import { register } from '@/api/auth';
 
-interface RegisterFormValues {
-  username: string;
-  password: string;
-  confirmPassword: string;
-  email: string;
-  nickname?: string;
-}
+const { Text } = Typography;
 
 function Register() {
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values: RegisterFormValues) => {
+  const handleSubmit = async (values: {
+    username: string; password: string; email: string; nickname?: string;
+  }) => {
     setLoading(true);
     try {
       await register({
@@ -26,96 +22,73 @@ function Register() {
         email: values.email,
         nickname: values.nickname || undefined,
       });
-      message.success('注册成功，请等待管理员审核');
+      message.success('注册成功，请等待管理员审核后登录');
       navigate('/login', { replace: true });
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { msg?: string } } };
-      const msg = axiosError.response?.data?.msg || '注册失败，请重试';
-      message.error(msg);
+      const e = err as { response?: { data?: { msg?: string } } };
+      message.error(e.response?.data?.msg || '注册失败');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card>
-      <Form
-        form={form}
-        onFinish={handleSubmit}
-        size="large"
-      >
-        <Form.Item
-          name="username"
-          rules={[{ required: true, message: '请输入用户名' }]}
-        >
-          <Input
-            prefix={<UserOutlined />}
-            placeholder="用户名"
-          />
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>
+        创建账号
+      </h2>
+      <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 24, fontSize: 13 }}>
+        注册后需等待管理员审核
+      </Text>
+
+      <Form form={form} onFinish={handleSubmit} size="large" autoComplete="off">
+        <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+          <Input prefix={<UserOutlined style={{ color: '#bfbfbf' }} />} placeholder="用户名" />
         </Form.Item>
-        <Form.Item
-          name="password"
-          rules={[
-            { required: true, message: '请输入密码' },
-            { min: 8, message: '密码至少 8 个字符' },
-          ]}
-        >
-          <Input.Password
-            prefix={<LockOutlined />}
-            placeholder="密码（至少 8 个字符）"
-          />
+
+        <Form.Item name="email" rules={[
+          { required: true, message: '请输入邮箱' },
+          { type: 'email', message: '邮箱格式不正确' },
+        ]}>
+          <Input prefix={<MailOutlined style={{ color: '#bfbfbf' }} />} placeholder="邮箱" />
         </Form.Item>
-        <Form.Item
-          name="confirmPassword"
-          dependencies={['password']}
-          rules={[
-            { required: true, message: '请确认密码' },
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                if (!value || getFieldValue('password') === value) {
-                  return Promise.resolve();
-                }
-                return Promise.reject(new Error('两次输入的密码不一致'));
-              },
-            }),
-          ]}
-        >
-          <Input.Password
-            prefix={<LockOutlined />}
-            placeholder="确认密码"
-          />
+
+        <Form.Item name="password" rules={[
+          { required: true, message: '请输入密码' },
+          { min: 8, message: '密码至少 8 个字符' },
+        ]}>
+          <Input.Password prefix={<LockOutlined style={{ color: '#bfbfbf' }} />} placeholder="密码（至少 8 个字符）" />
         </Form.Item>
-        <Form.Item
-          name="email"
-          rules={[
-            { required: true, message: '请输入邮箱' },
-            { type: 'email', message: '邮箱格式不正确' },
-          ]}
-        >
-          <Input
-            prefix={<MailOutlined />}
-            placeholder="邮箱"
-          />
+
+        <Form.Item name="confirmPassword" dependencies={['password']} rules={[
+          { required: true, message: '请确认密码' },
+          ({ getFieldValue }) => ({
+            validator(_, value) {
+              if (!value || getFieldValue('password') === value) return Promise.resolve();
+              return Promise.reject(new Error('两次输入的密码不一致'));
+            },
+          }),
+        ]}>
+          <Input.Password prefix={<LockOutlined style={{ color: '#bfbfbf' }} />} placeholder="确认密码" />
         </Form.Item>
-        <Form.Item
-          name="nickname"
-          rules={[{ max: 50, message: '昵称不能超过 50 个字符' }]}
-        >
-          <Input
-            prefix={<SmileOutlined />}
-            placeholder="昵称（可选）"
-          />
+
+        <Form.Item name="nickname" rules={[{ max: 50, message: '昵称不能超过 50 个字符' }]}>
+          <Input prefix={<SmileOutlined style={{ color: '#bfbfbf' }} />} placeholder="昵称（可选）" />
         </Form.Item>
-        <Form.Item>
+
+        <Form.Item style={{ marginBottom: 0 }}>
           <Button type="primary" htmlType="submit" loading={loading} block>
             注册
           </Button>
         </Form.Item>
-        <div style={{ textAlign: 'center' }}>
-          已有账号？<Link to="/login">返回登录</Link>
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Text style={{ fontSize: 13 }}>
+            已有账号？<Link to="/login">返回登录</Link>
+          </Text>
         </div>
       </Form>
-    </Card>
+    </div>
   );
 }
 
