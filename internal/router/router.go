@@ -365,7 +365,6 @@ func Setup(deps *Dependencies) *gin.Engine {
 		}
 
 		// 服务器信息
-		v1.GET("/server/info", serverHandler.GetInfo)
 
 		// 管理员路由（需要 admin 角色）
 		admin := v1.Group("/admin")
