@@ -63,9 +63,14 @@ function Landing() {
           height: 64,
         }}
       >
-        <Text strong style={{ fontSize: 22, color: '#1677ff' }}>
-          🚀 微盈通
-        </Text>
+        <Space align="center" size={8}>
+          <img
+            src="https://ynhx.oss-cn-chengdu.aliyuncs.com/%E5%AE%8F%E6%9B%A6%E7%A7%91%E6%8A%80logo-08.png"
+            alt="微盈通"
+            style={{ width: 36, height: 36, borderRadius: 6 }}
+          />
+          <Text strong style={{ fontSize: 20, color: '#1677ff' }}>微盈通</Text>
+        </Space>
         <Space>
           <Button icon={<LoginOutlined />} onClick={() => navigate('/login')}>
             登录

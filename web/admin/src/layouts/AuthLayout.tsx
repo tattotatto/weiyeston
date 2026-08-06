@@ -20,15 +20,11 @@ function AuthLayout() {
       }}>
         {/* Logo + Brand */}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: 16,
-            background: 'linear-gradient(135deg, #1677ff, #0958d9)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, color: '#fff', marginBottom: 16,
-            boxShadow: '0 4px 12px rgba(22,119,255,0.3)',
-          }}>
-            🚀
-          </div>
+          <img
+            src="https://ynhx.oss-cn-chengdu.aliyuncs.com/%E5%AE%8F%E6%9B%A6%E7%A7%91%E6%8A%80logo-08.png"
+            alt="微盈通"
+            style={{ width: 72, height: 72, marginBottom: 16, borderRadius: 12 }}
+          />
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>
             微盈通
           </h1>
