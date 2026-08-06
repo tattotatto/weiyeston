@@ -32,7 +32,8 @@ function UserList() {
     setLoading(true);
     try {
       const res = await getUsers();
-      setData(res.data.data || []);
+      const result = res.data.data as unknown as { list: AdminUserVO[]; total: number };
+      setData(result.list || []);
     } catch {
       message.error('获取用户列表失败');
     } finally {
