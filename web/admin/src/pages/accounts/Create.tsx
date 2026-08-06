@@ -1,9 +1,51 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, Alert, message, Space } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, Alert, Upload, message, Space } from 'antd';
+import type { FormInstance } from 'antd/es/form';
+import { ArrowLeftOutlined, InboxOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import type { UploadFile } from 'antd/es/upload/interface';
 import { createAccount, type CreateAccountParams } from '@/api/account';
 import { getServerInfo } from '@/api/server';
+import { getToken } from '@/utils/token';
+
+const { Dragger } = Upload;
+
+const normFile = (e: { fileList: UploadFile[] }) => e?.fileList;
+
+function UploadImage({ form, fieldName }: { form: FormInstance; fieldName: string }) {
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const token = getToken();
+
+  return (
+    <Dragger
+      name="file"
+      maxCount={1}
+      accept="image/*"
+      fileList={fileList}
+      action="/api/v1/materials/upload"
+      headers={{ Authorization: `Bearer ${token}` }}
+      onChange={({ file, fileList: newList }) => {
+        setFileList(newList);
+        if (file.status === 'done' && file.response?.data?.url) {
+          form.setFieldValue(fieldName, file.response.data.url);
+          message.success('上传成功');
+        } else if (file.status === 'error') {
+          message.error('上传失败');
+        }
+      }}
+      onRemove={() => {
+        form.setFieldValue(fieldName, '');
+        setFileList([]);
+      }}
+    >
+      <p className="ant-upload-drag-icon">
+        <InboxOutlined />
+      </p>
+      <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+      <p className="ant-upload-hint">支持 PNG、JPG、GIF，最大 10MB</p>
+    </Dragger>
+  );
+}
 
 function AccountCreate() {
   const navigate = useNavigate();
@@ -124,19 +166,23 @@ function AccountCreate() {
           </Form.Item>
 
           <Form.Item
-            label="头像 URL"
+            label="头像"
             name="avatar_url"
+            valuePropName="fileList"
+            getValueFromEvent={normFile}
             rules={[{ max: 500, message: 'URL 不能超过 500 个字符' }]}
           >
-            <Input placeholder="https://" />
+            <UploadImage fieldName="avatar_url" form={form} />
           </Form.Item>
 
           <Form.Item
-            label="二维码 URL"
+            label="二维码"
             name="qr_code_url"
+            valuePropName="fileList"
+            getValueFromEvent={normFile}
             rules={[{ max: 500, message: 'URL 不能超过 500 个字符' }]}
           >
-            <Input placeholder="https://" />
+            <UploadImage fieldName="qr_code_url" form={form} />
           </Form.Item>
 
           <Form.Item>
