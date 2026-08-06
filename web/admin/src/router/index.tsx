@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import AdminLayout from '@/layouts/AdminLayout';
 import AuthLayout from '@/layouts/AuthLayout';
+import Landing from '@/pages/Landing';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Dashboard from '@/pages/Dashboard';
@@ -39,8 +40,11 @@ export const router = createBrowserRouter([
       { index: true, element: <Register /> },
     ],
   },
+  // Landing page (public)
+  { path: '/', element: <Landing /> },
+  // Admin (protected)
   {
-    path: '/',
+    path: '/admin',
     element: (
       <AuthGuard>
         <AdminLayout />

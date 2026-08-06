@@ -55,8 +55,8 @@ func Setup(deps *Dependencies) *gin.Engine {
 	r.GET("/api/health", healthHandler.Check)
 	r.GET("/api/v1/health", healthHandler.Check)
 
-	// Root redirect to admin SPA
-	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/admin") })
+	// Root → SPA landing page
+	r.GET("/", func(c *gin.Context) { c.File("./web/admin/index.html") })
 
 	// Test routes (dev/test environment only)
 	if deps.Config.Server.Mode != "release" {
@@ -364,7 +364,8 @@ func Setup(deps *Dependencies) *gin.Engine {
 	r.GET("/admin/*filepath", func(c *gin.Context) { c.File("./web/admin/" + c.Param("filepath")) })
 	r.NoRoute(func(c *gin.Context) {
 		p := c.Request.URL.Path
-		if p == "/admin" || (len(p) > 6 && p[:7] == "/admin/") {
+		if p == "/admin" || (len(p) > 6 && p[:7] == "/admin/") ||
+			p == "/login" || p == "/register" || p == "/" {
 			c.File("./web/admin/index.html")
 			return
 		}
