@@ -45,7 +45,7 @@ function AuthLayout() {
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Go + React + PostgreSQL · 高性能多租户架构
+            云南宏曦科技有限公司版权所有
           </Text>
         </div>
       </Content>

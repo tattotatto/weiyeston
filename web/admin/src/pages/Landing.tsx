@@ -155,7 +155,7 @@ function Landing() {
       </Content>
 
       <Footer style={{ textAlign: 'center', background: '#f7f8fc' }}>
-        <Text type="secondary">微盈通 V2 · Go + React + PostgreSQL · 高性能微信公众号 SaaS 平台</Text>
+        <Text type="secondary">云南宏曦科技有限公司版权所有</Text>
       </Footer>
     </Layout>
   );
