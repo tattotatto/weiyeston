@@ -167,6 +167,9 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	if req.VipEndTime != nil && *req.VipEndTime != "" {
 		t, err := time.Parse(time.RFC3339, *req.VipEndTime)
 		if err != nil {
+			t, err = time.Parse("2006-01-02 15:04:05", *req.VipEndTime)
+			}
+		if err != nil {
 			t, err = time.Parse("2006-01-02", *req.VipEndTime)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
